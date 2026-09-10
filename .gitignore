@@ -34,3 +34,12 @@ main/resources/static/
 src/main/resources/static/
 .claude/settings.local.json
 CLAUDE.local.md
+
+# zcode agent local data
+.zcode/
+
+# docker runtime data (mysql data / backups / server volume)
+docker/data/
+
+# maven build output
+gms-server/target/

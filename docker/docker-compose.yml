@@ -1,0 +1,106 @@
+name: beidou
+
+services:
+  beidou-server:
+    container_name: beidou-server
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      TZ: Asia/Shanghai
+    # 不用宿主机默认的运营商 DNS（实测对 .xyz 域名有超时和 10.0.0.1 污染应答）；
+    # 服务名解析仍走 docker 内置 DNS，不受影响
+    dns:
+      - 223.5.5.5
+      - 119.29.29.29
+      # 想固定堆大小可覆盖，例如：JAVA_OPTS=-Xmx2G -Duser.timezone=Asia/Shanghai
+      # JAVA_OPTS: "-Xmx2G -Duser.timezone=Asia/Shanghai"
+    ports:
+      # 管理后台 UI + REST（UI 已嵌入 jar，同源托管）
+      - "8686:8686"
+      # 登录服
+      - "8484:8484"
+      # 频道端口，公式：7575 + (频道号-1) + 世界号*100；加频道需同步扩端口段
+      - "7575-7577:7575-7577"
+    volumes:
+      # 首次启动自动从镜像内 /opt/server_backup 初始化（约 650M）；
+      # application.yml / wz / scripts 均在此目录，可直接编辑
+      - ./data/server:/opt/server
+    # 注意：命令行参数优先级高于 application.yml（getStartParam：JVM 参数 > 命令行 > 环境变量）
+    command:
+      - --mybatis-flex.datasource.mysql.url=jdbc:mysql://beidou-db:3306/beidou?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+      - --mybatis-flex.datasource.mysql.username=root
+      - --mybatis-flex.datasource.mysql.password=root
+      # 客户端与 docker 同机时用 127.0.0.1；局域网联机改为宿主机局域网 IP（如 192.168.1.100）
+      - --gms.service.wan-host=127.0.0.1
+      - --gms.service.lan-host=127.0.0.1
+      - --gms.service.localhost=127.0.0.1
+      # !!! 生产环境务必自行生成 jwt secret（openssl rand -hex 10）并关闭 swagger !!!
+      # - --jwt.secret=<your secret key here>
+      # - --springdoc.api-docs.enabled=false
+      # - --springdoc.swagger-ui.enabled=false
+    healthcheck:
+      # 登录服端口起来 = 服务端完成 WZ 加载对外可用；start_period 容忍启动期 WZ 加载耗时
+      # 注意 JVM 双栈监听显示为 :::8484，因此按 :8484 匹配而非 0.0.0.0:8484
+      test: ["CMD-SHELL", "netstat -tln 2>/dev/null | grep -q ':8484'"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 300s
+    restart: unless-stopped
+    depends_on:
+      beidou-db:
+        condition: service_healthy
+    networks:
+      - beidou-network
+
+  beidou-db:
+    container_name: beidou-db
+    image: mysql:8.4.0
+    environment:
+      TZ: Asia/Shanghai
+      # 修改密码需同步两处：beidou-server 的 command 里 url 凭证、beidou-backup 的 DB_PASSWORD
+      MYSQL_ROOT_PASSWORD: "root"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    # 需要从宿主机用客户端直连数据库时打开：
+    # ports:
+    #   - "3306:3306"
+    networks:
+      - beidou-network
+
+  beidou-backup:
+    container_name: beidou-backup
+    image: mysql:8.4.0
+    entrypoint: ["/bin/sh", "/backup-entrypoint.sh"]
+    environment:
+      TZ: Asia/Shanghai
+      DB_HOST: beidou-db
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: "root"        # 与 MYSQL_ROOT_PASSWORD 保持一致
+      DB_NAME: beidou
+      # 密度加权定点：20:40/22:20 三等分晚高峰(19:00-24:00)，13:00 对切午高峰(12-14点)，04:00 低谷做每日基线
+      # 效果：晚高峰最坏丢 1.7h，全天最大裸奔 9h（且落在凌晨/上午低密度段）
+      BACKUP_TIMES: "04:00,13:00,20:40,22:20"
+      BACKUP_KEEP: "28"             # 滚动保留 28 份（每天 4 份 ≈ 7 天）
+    volumes:
+      - ./data/backups:/backups
+      - ./backup-entrypoint.sh:/backup-entrypoint.sh:ro
+    restart: unless-stopped
+    depends_on:
+      beidou-db:
+        condition: service_healthy
+    networks:
+      - beidou-network
+
+networks:
+  beidou-network:
+    driver: bridge

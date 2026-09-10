@@ -1,0 +1,35 @@
+# 版本控制与本地产物
+.git
+.gitignore
+.gitattributes
+.zcode
+.claude
+.idea
+*.iml
+
+# 与镜像无关的文档与脚本
+docs
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+README.md
+LICENSE
+
+# docker 运行数据（绝不能进构建上下文）
+docker/data
+
+# 构建产物与依赖缓存
+**/target
+gms-ui/node_modules
+gms-ui/dist
+gms-server/logs
+**/*.log
+
+# 前端杂项（构建不需要）
+gms-ui/.eslintrc.js
+gms-ui/.eslintignore
+gms-ui/.prettierrc.js
+gms-ui/.prettierignore
+gms-ui/commitlint.config.js
+gms-ui/pnpm-lock.yaml
+gms-ui/README.md
