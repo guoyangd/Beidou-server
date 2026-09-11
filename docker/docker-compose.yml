@@ -6,6 +6,9 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      # 国内网络拉不动 docker.io 时：docker compose build --build-arg IMAGE_PREFIX=docker.m.daocloud.io/library/
+      args:
+        IMAGE_PREFIX: ${IMAGE_PREFIX:-}
     environment:
       TZ: Asia/Shanghai
     # 不用宿主机默认的运营商 DNS（实测对 .xyz 域名有超时和 10.0.0.1 污染应答）；

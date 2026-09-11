@@ -1,12 +1,16 @@
 # BeiDou-Server 全自包含镜像：UI + 服务端 jar + wz + scripts
 # 构建上下文为仓库根目录：docker build -f docker/Dockerfile .
+# 国内网络拉不动 docker.io 时，给基础镜像加镜像源前缀构建：
+#   docker compose build --build-arg IMAGE_PREFIX=docker.m.daocloud.io/library/
+#   （compose 里已透传该 build arg，也可 export DOCKER_BUILDKIT=1 后直接用）
+ARG IMAGE_PREFIX=""
 
 #############################
 # Stage 1: 构建 gms-ui 前端  #
 #############################
 # 注意：vite-plugin-imagemin 依赖 gifsicle/jpegtran/pngquant 等原生二进制，
 # 必须用 Debian(glibc) 基础镜像才能直接用预编译包；alpine(musl) 会全部回退源码编译而失败
-FROM node:20.15.0-bookworm-slim AS ui-builder
+FROM ${IMAGE_PREFIX}node:20.15.0-bookworm-slim AS ui-builder
 
 WORKDIR /build
 
@@ -21,7 +25,7 @@ RUN yarn build
 ##############################
 # Stage 2: 构建服务端 jar     #
 ##############################
-FROM maven:3.9.6-amazoncorretto-21 AS server-builder
+FROM ${IMAGE_PREFIX}maven:3.9.6-amazoncorretto-21 AS server-builder
 
 WORKDIR /build
 
@@ -49,7 +53,7 @@ COPY gms-server/scripts-zh-CN /result/scripts-zh-CN
 ####################################
 # Stage 3: 运行时（JRE21 alpine）   #
 ####################################
-FROM eclipse-temurin:21-jre-alpine
+FROM ${IMAGE_PREFIX}eclipse-temurin:21-jre-alpine
 
 ENV TZ=Asia/Shanghai \
     JAVA_OPTS="-XX:MaxRAMPercentage=50.0 -Duser.timezone=Asia/Shanghai"

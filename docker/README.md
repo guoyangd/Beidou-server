@@ -33,6 +33,13 @@ docker compose up -d --build   # 首次构建 10-20 分钟（maven/yarn 拉依�
 docker compose logs -f beidou-server   # 等 WZ 加载完、出现 LoginServer 监听
 ```
 
+国内网络拉不动 docker.io 时，给基础镜像走镜像源前缀构建：
+
+```bash
+docker compose build --build-arg IMAGE_PREFIX=docker.m.daocloud.io/library/
+docker compose up -d
+```
+
 - **管理后台**：`http://localhost:8686`
 - **游戏客户端**：登录服 `localhost:8484`（需要配套的 BeiDou 客户端）
 - **状态**：`docker compose ps`（server 的 healthcheck 有 300s start_period，WZ 加载期间显示 health: starting 是正常的）

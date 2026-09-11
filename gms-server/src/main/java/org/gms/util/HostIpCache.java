@@ -172,10 +172,11 @@ public final class HostIpCache {
         if (parts.length != 4) {
             return true;
         }
-        int a, b;
+        int a, b, c;
         try {
             a = Integer.parseInt(parts[0]);
             b = Integer.parseInt(parts[1]);
+            c = Integer.parseInt(parts[2]);
         } catch (NumberFormatException e) {
             return true;
         }
@@ -191,7 +192,21 @@ public final class HostIpCache {
         if (a == 192 && b == 168) {
             return true;
         }
-        return a == 100 && b >= 64 && b <= 127;
+        if (a == 100 && b >= 64 && b <= 127) {
+            return true;
+        }
+        // RFC 6890 文档/基准段：TEST-NET(192.0.2/24、198.51.100/24、203.0.113/24)、
+        // 基准测试(198.18/15)、IETF 协议赋值(192.0.0/24)，正常 DDNS 记录不会指到这些段
+        if (a == 192 && b == 0 && (c == 0 || c == 2)) {
+            return true;
+        }
+        if (a == 198 && (b == 18 || b == 19)) {
+            return true;
+        }
+        if (a == 198 && b == 51 && c == 100) {
+            return true;
+        }
+        return a == 203 && b == 0 && c == 113;
     }
 
     /** 客户端封包的 IP 字段只有 4 字节，从全部解析结果中优先挑 IPv4，避免拿到 AAAA 记录 */
