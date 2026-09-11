@@ -40,19 +40,17 @@
 
     <loggers>
         <!-- 降低 Druid 的日志级别 -->
-        <Logger name="com.alibaba.druid" level="ERROR">
-            <AppenderRef ref="Console"/>
-        </Logger>
+        <Logger name="com.alibaba.druid" level="ERROR"/>
 
-        <!-- 降低 flyway 的日志级别 -->
-        <Logger name="org.flywaydb.core.internal.command.DbMigrate" level="INFO" additivity="false">
-            <AppenderRef ref="Console"/>
-        </Logger>
+        <!-- 降低 flyway 的日志级别（输出去向统一由 root 的 appender 开关决定） -->
+        <Logger name="org.flywaydb.core.internal.command.DbMigrate" level="INFO"/>
         <Logger name="org.flywaydb" level="ERROR"/>
 
         <root level="${output_log_level}">
-            <appender-ref ref="RollingFile"/>
-            <appender-ref ref="Console"/>
+            <!-- 部署环境按需二选一：设 LOG_CONSOLE_LEVEL=OFF 只写文件，或 LOG_FILE_LEVEL=OFF 只上控制台。
+                 若宿主同时收集 stdout 和 logs/out.log（entrypoint tail 文件），不关掉一路会导致日志翻倍 -->
+            <appender-ref ref="RollingFile" level="${env:LOG_FILE_LEVEL:-DEBUG}"/>
+            <appender-ref ref="Console" level="${env:LOG_CONSOLE_LEVEL:-INFO}"/>
         </root>
     </loggers>
 

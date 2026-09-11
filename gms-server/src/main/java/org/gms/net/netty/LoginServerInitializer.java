@@ -15,7 +15,10 @@ public class LoginServerInitializer extends ServerChannelInitializer {
     @Override
     public void initChannel(SocketChannel socketChannel) {
         final String clientIp = socketChannel.remoteAddress().getHostString();
-        log.info(I18nUtil.getLogMessage("LoginServerInitializer.initChannel.info1"), clientIp);
+        // 回环连接只来自容器健康检查（bash /dev/tcp 探测 8484），不打日志避免 30 秒一条刷屏
+        if (!clientIp.equals("127.0.0.1") && !clientIp.equals("::1")) {
+            log.info(I18nUtil.getLogMessage("LoginServerInitializer.initChannel.info1"), clientIp);
+        }
 
         PacketProcessor packetProcessor = PacketProcessor.getLoginServerProcessor();
         final long clientSessionId = sessionId.getAndIncrement();

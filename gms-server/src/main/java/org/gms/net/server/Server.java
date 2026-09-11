@@ -317,17 +317,24 @@ public class Server {
         String remoteIp = client.getRemoteAddress();
 
         String[] hostAddress = getIP(world, channel).split(":");
+        // localhost/lan-host 是管理员显式配置（私网地址合法，直接放行）；
+        // 只有 wan 域名走"拒收保留地址"防护（防 DDNS 记录被污染成私网地址）
+        boolean adminConfigured = false;
         if (IpAddresses.isLocalAddress(remoteIp)) {
             hostAddress[0] = serviceProperty.getLocalhost();
+            adminConfigured = true;
         } else if (IpAddresses.isLanAddress(remoteIp)) {
             hostAddress[0] = serviceProperty.getLanHost();
+            adminConfigured = true;
         }
 
-        try {
-            return hostAddress;
-        } catch (Exception e) {
+        // wan-host 可能是 DDNS 域名：经缓存解析为 IPv4 字面量后再下发，DNS 抖动时沿用上次成功 IP；
+        // 从未解析成功过则返回 null，由调用方向客户端回错误包，避免其在选角界面卡死并连带触发"已登录"
+        hostAddress[0] = HostIpCache.resolve(hostAddress[0], adminConfigured);
+        if (hostAddress[0] == null) {
             return null;
         }
+        return hostAddress;
     }
 
     public int addChannel(int worldid) {
@@ -703,6 +710,12 @@ public class Server {
         // 重置登录状态和雇佣商店状态
         accountService.resetAllLoggedIn();
         characterService.resetMerchant();
+
+        // 预解析 DDNS 域名（wan-host/lan-host 为域名时，登录/转服不再依赖现场 DNS），并启动后台周期刷新。
+        // wan 走严格模式（拒收保留地址）；lan/localhost 是管理员配置，允许私网
+        HostIpCache.prewarm(serviceProperty.getWanHost(), false);
+        HostIpCache.prewarm(serviceProperty.getLanHost(), true);
+        HostIpCache.prewarm(serviceProperty.getLocalhost(), true);
 
         // 清空失效的现金物品
         nxCodeService.clearExpirations();

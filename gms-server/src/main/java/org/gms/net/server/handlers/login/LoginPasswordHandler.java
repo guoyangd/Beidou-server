@@ -31,13 +31,17 @@ import org.gms.net.server.coordinator.session.Hwid;
 import org.gms.util.BCrypt;
 import org.gms.util.DatabaseConnection;
 import org.gms.util.HexTool;
+import org.gms.util.I18nUtil;
 import org.gms.util.PacketCreator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 import java.util.Calendar;
 
 public final class LoginPasswordHandler implements PacketHandler {
+    private static final Logger log = LoggerFactory.getLogger(LoginPasswordHandler.class);
 
     @Override
     public boolean validateState(Client c) {
@@ -110,6 +114,9 @@ public final class LoginPasswordHandler implements PacketHandler {
             c.sendPacket(PacketCreator.getPermBan(c.getGReason()));//crashes but idc :D
             return;
         } else if (loginok != 0) {
+            // 登录失败此前完全静默（只回错误包），线上排查"无法登录"类问题没有抓手，这里补一条失败日志。
+            // 常见错误码：4 密码错 / 5 账号不存在 / 7 已登录 / 13 多开受限 / 16 / 17 等
+            log.warn(I18nUtil.getLogMessage("LoginPasswordHandler.fail"), login, remoteHost, loginok);
             c.sendPacket(PacketCreator.getLoginFailed(loginok));
             return;
         }
@@ -117,6 +124,7 @@ public final class LoginPasswordHandler implements PacketHandler {
             c.checkChar(c.getAccID());
             login(c);
         } else {
+            log.warn(I18nUtil.getLogMessage("LoginPasswordHandler.failFinishLogin"), login, remoteHost);
             c.sendPacket(PacketCreator.getLoginFailed(7));
         }
     }

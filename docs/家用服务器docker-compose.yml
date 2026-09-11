@@ -1,0 +1,160 @@
+# 家用服务器 docker-compose（基于用户原版修订：2026-09-09）
+# ── QNAP 重要约定 ─────────────────────────────────────────────
+# Container Station 重新部署会清空应用目录（/share/Container/<应用名>/），
+# 因此所有持久数据统一放在 /share/Data/docker/maplestory/，compose 一律绝对路径挂载。
+# 注意：QNAP 共享文件夹都在 /share/ 下——若 "Data" 不是共享文件夹而是某共享文件夹内的
+# 子目录，请全局替换为实际路径（如 /share/XXX/Data/docker/maplestory）。
+# 若你的目录不同，全局替换 /share/Data/docker/maplestory 即可。
+# ─────────────────────────────────────────────────────────────
+# 修订点：
+#   1. 两个服务补上 restart: unless-stopped（进程退出/宿主机重启后自愈）
+#   2. db 健康检查改为 -h 127.0.0.1（TCP）：原来 -h localhost 走 socket，
+#      MySQL 首次初始化的临时实例也能应答，会出现"健康检查放行但 3306 未监听"的竞态
+#   3. 服务端健康检查启用：探测 8484 登录端口——它在 WZ 加载、频道全部就绪之后才开放，
+#      是"游戏服真正可玩"的信号；比探测 8686（Spring 起来就行）更准
+#   4. 新增 beidou-db-backup：每天 04:00 自动 mysqldump（--single-transaction 不锁表），
+#      gzip 压缩存 /share/Data/docker/maplestory/docker-db-backup/，保留 14 天自动清理
+#   5. 移除已废弃的 version 字段
+
+services:
+  beidou-server-all:
+    container_name: beidou-server-all
+    image: sleepnap/beidou-server-all:v1.12
+    restart: unless-stopped
+    # 日志轮转：崩溃循环时 json 日志不会无限膨胀（约 250MB 封顶）
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      # Web
+      - "8686:8686"
+      # Login server
+      - "8484:8484"
+      # Channels.
+      - "7575-7577:7575-7577"
+    volumes:
+      - /share/Data/docker/maplestory/beidou-server-release:/opt/server
+    # 注意 命令行参数的优先级高于 application.yml 配置文件
+    command:
+      - --mybatis-flex.datasource.mysql.url=jdbc:mysql://beidou-db:3306/beidou?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+      - --mybatis-flex.datasource.mysql.username=root
+      - --mybatis-flex.datasource.mysql.password=GUOyang403159
+      - --gms.service.wan-host=smxgyflmxd.guos.xyz
+      - --gms.service.lan-host=192.168.99.11
+      - --gms.service.localhost=smxgyflmxd.guos.xyz
+      #  !!! 生产环境务必自行生成密钥(可以使用以下指令来生成) , 并关闭 swagger !!!
+      #  powershell:  -join ((1..10) | ForEach { '{0:x2}' -f (Get-Random -Maximum 256) })
+      #  bash      :  openssl rand -hex 10
+      # - --jwt.secret=<your secret key here>
+      # - --springdoc.api-docs.enabled=false
+      # - --springdoc.swagger-ui.enabled=false
+    healthcheck:
+      # 8484 = 登录端口，整个启动链（Spring → WZ → 频道）完成后才监听，
+      # 最能代表"游戏真正可玩"。服务端已对回环（127.0.0.1）连接不打日志，
+      # 健康检查的探测不会产生"客户端 xxx 连接到了登陆端口"刷屏（需 2026-09-09 后的 jar）
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8484' 2>/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # 冷启动含 WZ 预载与事件脚本加载，实测 35~140s，给足窗口
+      start_period: 180s
+    depends_on:
+      beidou-db:
+        condition: service_healthy
+    networks:
+      - beidou-network
+
+  beidou-db:
+    container_name: beidou-db
+    image: mysql:8.4.0
+    restart: unless-stopped
+    environment:
+      # mysql root 默认密码
+      MYSQL_ROOT_PASSWORD: "GUOyang403159"
+    # ports:
+    #   - "3306:3306"
+    volumes:
+      - /share/Data/docker/maplestory/docker-db-data:/var/lib/mysql
+    healthcheck:
+      # -h 127.0.0.1 强制走 TCP：socket 探测会在初始化阶段误报健康。
+      # 注意 TCP 就绪比 socket 晚，首次初始化（空数据目录）在慢盘上可能要 1~几分钟，
+      # 因此 start_period/retries 给足余量，避免首次 up 时长时间 unhealthy
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pGUOyang403159"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    networks:
+      - beidou-network
+
+  # 每天 01:00/09:00/15:00/21:00 自动备份数据库到 /share/Data/docker/maplestory/docker-db-backup/，保留 7 天
+  beidou-db-backup:
+    container_name: beidou-db-backup
+    image: mysql:8.4.0          # 复用 db 同款镜像，无需额外下载
+    restart: unless-stopped
+    depends_on:
+      beidou-db:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      # mysqldump/mysql 自动读取 MYSQL_PWD，避免密码出现在进程命令行
+      MYSQL_PWD: "GUOyang403159"
+      BACKUP_TIMES: "01:00 09:00 15:00 21:00"  # 每天4次均衡布局：白天全覆盖(≤6h)，晚高峰最短间隔(4h)
+      KEEP_DAYS: "7"                # 保留天数（28 个文件，十几MB）
+    volumes:
+      - /share/Data/docker/maplestory/docker-db-backup:/backup
+      # 所有持久数据统一放 /share/Data/docker/maplestory/（Container Station 管不到的地方），
+      # 用绝对路径挂载：重新部署/删除重建应用都不会动到数据；应用目录变成一次性外壳。
+      # 目录不存在时 docker 会自动创建 docker-db-backup
+      - /share/Data/docker/maplestory/backup.sh:/backup.sh:ro
+    entrypoint: ["bash", "/backup.sh"]
+    networks:
+      - beidou-network
+
+#  adminer:
+#    image: adminer
+#    container_name: beidou-db-adminer
+#    ports:
+#      - 8080:8080
+#    networks:
+#      - beidou-network
+
+#  phpmyadmin:
+#    image: phpmyadmin
+#    container_name: beidou-db-phpmyadmin
+#    ports:
+#      - 8081:80
+#    environment:
+#      PMA_ARBITRARY: 0
+#      PMA_VERBOSE: beidou 数据库
+#      PMA_HOST: beidou-db
+#      PMA_PORT: 3306
+#      PMA_USER: root
+#      PMA_PASSWORD: root
+#      TZ: Asia/Shanghai
+#    networks:
+#      - beidou-network
+
+networks:
+  beidou-network:
+    driver: bridge
+
+# ── 可选：进程"卡死但没退出"的自愈 ─────────────────────────────
+# restart 策略只对"进程退出"生效；JVM 死锁/挂住时 healthcheck 会变 unhealthy
+# 但 Docker 不会自动重启。启用下面这个边车后，unhealthy 超时的容器会被强制重启。
+# 启用方法：取消注释，并给 beidou-server-all 加 label: autoheal: "true"
+#
+#  autoheal:
+#    image: willfarrell/autoheal
+#    container_name: beidou-autoheal
+#    restart: unless-stopped
+#    environment:
+#      AUTOHEAL_CONTAINER_LABEL: autoheal
+#      AUTOHEAL_START_PERIOD: 300        # 启动宽限期（秒），给足冷启动时间
+#      AUTOHEAL_INTERVAL: 30             # 检查间隔（秒）
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock
