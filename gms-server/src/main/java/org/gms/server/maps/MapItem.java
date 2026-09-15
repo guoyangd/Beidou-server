@@ -37,7 +37,7 @@ public class MapItem extends AbstractMapObject {
     protected MapObject dropper;
     protected int character_ownerid, party_ownerid, meso, questid = -1;
     protected byte type;
-    protected boolean pickedUp = false, playerDrop, partyDrop;
+    protected boolean pickedUp = false, playerDrop, partyDrop, permanentOwner;
     protected long dropTime;
     private final Lock itemLock = new ReentrantLock();
 
@@ -154,10 +154,11 @@ public class MapItem extends AbstractMapObject {
     }
 
     public final boolean hasClientsideOwnership(Character player) {
-        return this.character_ownerid == player.getId() || this.party_ownerid == player.getPartyId() || hasExpiredOwnershipTime();
+        return this.character_ownerid == player.getId() || this.party_ownerid == player.getPartyId() || (!permanentOwner && hasExpiredOwnershipTime());
     }
 
     public final boolean isFFADrop() {
+        if (permanentOwner) return false;
         return type == 2 || type == 3 || hasExpiredOwnershipTime();
     }
 
@@ -260,5 +261,9 @@ public class MapItem extends AbstractMapObject {
     @Override
     public void sendDestroyData(final Client client) {
         client.sendPacket(PacketCreator.removeItemFromMap(getObjectId(), 1, 0));
+    }
+    // SoloMapling: pin drop ownership forever (bot show-drops must never turn FFA).
+    public void setPermanentOwner(boolean permanentOwner) {
+        this.permanentOwner = permanentOwner;
     }
 }

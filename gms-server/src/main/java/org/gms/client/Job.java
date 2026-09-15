@@ -151,4 +151,24 @@ public enum Job {
 
         return BEGINNER;
     }
+    /**
+     * SoloMapling: job tier (1st-4th) from the job id, used by bot attack profile selection.
+     */
+    public int getJobTier() {
+        if (id == 0) {
+            return 0;
+        }
+        int lastTwoDigits = id % 100;
+        if (lastTwoDigits == 0) {
+            return 1;
+        } else if (lastTwoDigits == 10 || lastTwoDigits == 20 || lastTwoDigits == 30) {
+            return 2;
+        } else if (lastTwoDigits == 11 || lastTwoDigits == 21 || lastTwoDigits == 31) {
+            return 3;
+        } else if (lastTwoDigits == 12 || lastTwoDigits == 22 || lastTwoDigits == 32) {
+            return 4;
+        } else {
+            return 0;
+        }
+    }
 }

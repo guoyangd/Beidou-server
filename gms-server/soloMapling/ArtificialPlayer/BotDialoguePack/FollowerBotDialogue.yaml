@@ -1,0 +1,118 @@
+# 跟随者 Bot（FollowerBot）——被招募后尾随队长的同伴台词，仅在被玩家看到时说出。
+# 有玩家上下文的节点可用 {PLAYER_NAME}；LeaderLost/PartyFarewell 触发时队长已消失，不能带令牌
+# （带令牌但无玩家可解析的台词会被引擎丢弃）。
+
+FollowerBot:
+
+  FollowStart:
+    text:
+      - {line: "就跟在你后面{PLAYER_NAME}！", emote: 2}
+      - "你带路 我紧跟着"
+      - {line: "好嘞{PLAYER_NAME} 咱们去哪？", emote: 2}
+      - "组队走起 跟定你了"
+      - {line: "别走太快哈哈 腿短", emote: 6}
+      - "冲冲冲 ^^"
+      - {line: "我黏定你了{PLAYER_NAME} 别把我丢了", emote: 2}
+      - "跟上！这可比在城里罚站强多了"
+      - "哦 冒险时间到"
+      - {line: "你选图 我负责气氛", emote: 3}
+    emote:
+      - 2
+      - 0
+    wait: 1
+
+  StationHere:
+    text:
+      - {line: "就这张图？看着不错{PLAYER_NAME} 我在这安顿了", emote: 2}
+      - "好！开肝 我守住这个点"
+      - {line: "选得好{PLAYER_NAME} 满地怪 走起", emote: 2}
+      - "行 我上班了 搞经验咯"
+      - {line: "那我在这扎根了 别嫌我抢怪哈哈", emote: 3}
+      - "位置不错 药备好了 开干 ^^"
+      - {line: "这儿？完美 反正我也走累了", emote: 2}
+      - "成 我先清怪 你随便挑一边"
+    emote:
+      - 2
+      - 3
+    wait: 1
+
+  LeaderLost:
+    text:
+      - "呃……喂？人呢"
+      - {line: "等下—— 我刚跟丢了？？", emote: 6}
+      - "咦 明明刚刚还在"
+      - "那我在这等一会儿吧……"
+      - {line: "得 又走散了 一贯操作。", emote: 7}
+      - "可能是去换线了吧"
+      - "喂——？有人吗？"
+      - {line: "别慌 他会回来的……对吧？", emote: 6}
+    emote:
+      - 6
+      - 0
+    wait: 1
+
+  PartyFarewell:
+    text:
+      - "散伙了吗 玩得挺开心"
+      - {line: "啊 又回到单机生活了", emote: 4}
+      - "好！各位打得漂亮 回头见"
+      - "行吧 继续自己的练级大业"
+      - {line: "队伍解散了啊……好歹曾经拥有", emote: 4}
+      - "祝各位顺利！我自己也能行 ^^"
+      - "没队也没事 有怪打就行"
+      - {line: "就这样我又成了自由人", emote: 0}
+    emote:
+      - 4
+      - 0
+    wait: 1
+
+  LoyalToLeader:
+    text:
+      - "抱歉 我已经有队伍了"
+      - {line: "不行 我是{PLAYER_NAME}……不对哈哈 我是别人的队", emote: 7}
+      - "名花有主！队规如此"
+      - {line: "问我队长吧 我只听令 ^^", emote: 2}
+      - "忠于队伍 抱歉"
+      - "不能丢下我的车友"
+    emote:
+      - 0
+      - 2
+    wait: 1
+
+  NoMobsHere:
+    text:
+      - "在这练？没怪打啊哈哈"
+      - {line: "呃……{PLAYER_NAME} 这图我没看到怪", emote: 6}
+      - "我也想打 但怪说不行（因为根本没有）"
+      - "先找张有怪的图嘛 ^^"
+      - {line: "打什么？打空气吗？", emote: 3}
+      - "没怪没得肝 继续带路"
+    emote:
+      - 6
+      - 3
+    wait: 1
+
+  Goodbye:
+    text:
+      - "好！我继续跟着"
+      - {line: "回见 反正我就贴在你后面哈哈", emote: 2}
+      - "没事 继续带路"
+      - "好嘞 出发 ^^"
+      - {line: "行{PLAYER_NAME} 找到好图喊我", emote: 2}
+      - "收到 继续尾行"
+    emote:
+      - 2
+      - 0
+    wait: 1
+
+  PartyJoined:
+    text:
+      - "进队成功！现在正式算一伙的了 ^^"
+      - {line: "加入你们了{PLAYER_NAME} 经验走起", emote: 2}
+      - "进了！带我去好地方"
+      - {line: "正式和{PLAYER_NAME}组队 冲", emote: 2}
+      - "接受了 我们现在是真·车队 嘿嘿"
+      - "上车！带路吧"
+    emote:
+      - 2
+    wait: 1

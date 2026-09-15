@@ -24,6 +24,7 @@ package org.gms.server.life;
 import org.gms.client.Client;
 import org.gms.server.ShopFactory;
 import org.gms.server.maps.MapObjectType;
+import static org.gms.soloMapling.server.MapleVersionManager.isNPCinCurrentVersion;
 import org.gms.util.PacketCreator;
 
 public class NPC extends AbstractLoadedLife {
@@ -44,6 +45,10 @@ public class NPC extends AbstractLoadedLife {
 
     @Override
     public void sendSpawnData(Client client) {
+        // SoloMapling: filter NPCs by the configured version snapshot (npc_versions.yaml).
+        if (!isNPCinCurrentVersion(this.getId())) {
+            return;
+        }
         client.sendPacket(PacketCreator.spawnNPC(this));
         client.sendPacket(PacketCreator.spawnNPCRequestController(this, true));
     }

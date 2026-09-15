@@ -278,4 +278,15 @@ public class MapId {
     public static final int CRIMSONWOOD_KEEP = 610020006;
     public static final int MU_LUNG_DOJO_HALL = 925020001;
     public static final int EXCLUSIVE_TRAINING_CENTER = 970030000;
+    // ── SoloMapling: training-bot deep hubs & high-level grind maps. ──
+    public static final int ANT_TUNNEL_PARK = 105070001;        // deep rest junction → Cave of Evil Eye / Grave of Mushmom
+    public static final int PATH_OF_TIME_HUB = 220050300;       // deep Ludibrium junction → Forgotten Path of Time / Clocktower
+    public static final int SHARP_CLIFF_I = 211040300;          // deep El Nath junction → Sharp Cliff II / Wolf Territory / Dead Mine
+    public static final int FOREST_OF_GOLEM = 105040306;        // Sleepywood - The Forest of Golem
+    public static final int DRAKES_MEAL_TABLE = 105090300;      // Sleepywood - Drake's Meal Table
+    public static final int GARDEN_OF_DARKNESS_I = 200010301;   // Orbis - Garden of Darkness I
+    public static final int CLOUD_PARK_VI = 200080000;          // Orbis - Cloud Park VI
+    public static final int FORGOTTEN_PATH_OF_TIME_IV = 220070300; // Ludibrium - Forgotten Path of Time <4>
+    public static final int WOLF_TERRITORY_V = 211041000;       // El Nath - Wolf Territory V
+    public static final int FOREST_OF_DEAD_TREES_IV = 211041400; // El Nath - Forest of Dead Trees IV
 }

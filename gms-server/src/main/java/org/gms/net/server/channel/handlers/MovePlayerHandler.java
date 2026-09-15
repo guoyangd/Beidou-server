@@ -23,12 +23,16 @@ package org.gms.net.server.channel.handlers;
 
 import org.gms.client.Client;
 import org.gms.net.packet.InPacket;
+import org.gms.soloMapling.ArtificialPlayer.BotMovementSystem.InPacketReader;
 import org.gms.util.PacketCreator;
 import org.gms.exception.EmptyMovementException;
 
 public final class MovePlayerHandler extends AbstractMovementPacketHandler {
     @Override
     public final void handlePacket(InPacket p, Client c) {
+        if (InPacketReader.getMoveDataRecording()) {
+            InPacketReader.recordMovementInPacketToBinaryAndCSV(p);
+        }
         p.skip(9);
         try {   // thanks Sa for noticing empty movement sequences crashing players
             int movementDataStart = p.getPosition();

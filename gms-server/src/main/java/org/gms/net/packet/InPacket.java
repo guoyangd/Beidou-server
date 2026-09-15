@@ -15,4 +15,7 @@ public interface InPacket extends Packet {
     int available();
     void seek(int byteOffset);
     int getPosition();
+
+    // SoloMapling: duplicate a packet so movement replays can re-read the same bytes.
+    InPacket copy();
 }

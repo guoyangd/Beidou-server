@@ -1560,7 +1560,7 @@ public class StatEffect {
         return false;
     }
 
-    private boolean isPartyBuff() {
+    public boolean isPartyBuff() {
         if (lt == null || rb == null) {
             return false;
         }
@@ -1953,5 +1953,26 @@ public class StatEffect {
 
     public Map<MonsterStatus, Integer> getMonsterStati() {
         return monsterStatus;
+    }
+    // ── SoloMapling ──
+
+    /**
+     * Grant this buff to {@code target} as if cast by {@code caster}, via the internal
+     * non-primary apply path: real working buff (stat + icons + foreign aura), no MP cost,
+     * no cast animation on the target. Lets bots hand party/support buffs to nearby players.
+     */
+    public boolean applyToTarget(Character caster, Character target) {
+        return applyTo(caster, target, false, null, false, 1);
+    }
+
+    /**
+     * The skill's WZ attack rectangle anchored at {@code from}, mirrored for facing — the same
+     * geometry the skill's own hit detection uses — or null if the skill defines no lt/rb range.
+     */
+    public Rectangle getAttackBox(Point from, boolean facingLeft) {
+        if (lt == null || rb == null) {
+            return null;
+        }
+        return calculateBoundingBox(from, facingLeft);
     }
 }

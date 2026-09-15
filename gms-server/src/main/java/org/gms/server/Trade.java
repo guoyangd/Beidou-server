@@ -37,6 +37,9 @@ import org.gms.util.I18nUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.gms.util.PacketCreator;
+import org.gms.soloMapling.ArtificialPlayer.BotTradeSystem.BotTradeQueue;
+
+import static org.gms.soloMapling.ArtificialPlayer.BotHelpers.isBot;
 import org.gms.util.Pair;
 
 import java.util.ArrayList;
@@ -186,11 +189,11 @@ public class Trade {
         chr.sendPacket(PacketCreator.getTradeResult(number, result));
     }
 
-    private boolean isLocked() {
+    public boolean isLocked() {
         return locked.get();
     }
 
-    private int getMeso() {
+    public int getMeso() {
         return meso;
     }
 
@@ -394,11 +397,25 @@ public class Trade {
             }
 
             logTrade(local, partner);
-            local.completeTrade();
-            partner.completeTrade();
+            // SoloMapling: bots have no client to receive trade-item packets — skip their side of
+            // the item transfer and fire their result callback instead.
+            if (!isBot(local.getChr())) {
+                local.completeTrade();
+            }
+            if (!isBot(partner.getChr())) {
+                partner.completeTrade();
+            }
+            if (isBot(local.getChr())) {
+                local.setCallbackSuccessfulTrade();
+            }
+            if (isBot(partner.getChr())) {
+                partner.setCallbackSuccessfulTrade();
+            }
 
             partner.getChr().setTrade(null);
             chr.setTrade(null);
+            clearBotTradeQueue(partner.getChr());
+            clearBotTradeQueue(chr);
         }
     }
 
@@ -615,5 +632,48 @@ public class Trade {
             sj.add(I18nUtil.getLogMessage("Trade.info.inviteTrade.logTrade.msg3" , item.getQuantity(), itemName, item.getItemId()) + "\n");
         }
         return sj.toString();
+    }
+    // ── SoloMapling: bot trade participation. ──
+
+    public void setMesoBot(int meso) {
+        this.meso = meso;
+        chr.sendPacket(PacketCreator.getTradeMesoSet((byte) 0, this.meso));
+        if (partner != null) {
+            partner.getChr().sendPacket(PacketCreator.getTradeMesoSet((byte) 1, this.meso));
+        }
+    }
+
+    public boolean swapItem(Item item) {
+        synchronized (items) {
+            if (items.size() > 9) {
+                return false;
+            }
+            items.removeIf(it -> it.getPosition() == item.getPosition());
+            items.add(item);
+        }
+        return true;
+    }
+
+    public interface TradeResultCallback {
+        void onTradeResult(TradeResult result);
+    }
+
+    private TradeResultCallback callback;
+
+    public void setTradeResultCallback(TradeResultCallback callback) {
+        this.callback = callback;
+    }
+
+    private void setCallbackSuccessfulTrade() {
+        if (callback != null) {
+            callback.onTradeResult(TradeResult.SUCCESSFUL);
+        }
+    }
+    // SoloMapling: whenever a bot's trade dies, its BotTradeQueue entry (added on invite) must die
+    // with it — a stale entry NPEs the bot's next checkTradeQueue tick.
+    private static void clearBotTradeQueue(Character chr) {
+        if (isBot(chr)) {
+            BotTradeQueue.getInstance().removeTradeRequest(chr);
+        }
     }
 }

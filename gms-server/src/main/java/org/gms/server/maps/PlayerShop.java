@@ -420,6 +420,22 @@ public class PlayerShop extends AbstractMapObject {
         return s;
     }
 
+    // SoloMapling: visitor chat by Character — bots carry the shared headless client, so the
+    // speaker must be taken from the argument, not from c.getPlayer().
+    public void chat(Character player, String chat) {
+        byte s = getVisitorSlot(player);
+
+        synchronized (chatLog) {
+            chatLog.add(new Pair<>(player, chat));
+            if (chatLog.size() > 25) {
+                chatLog.remove(0);
+            }
+            chatSlot.put(player.getId(), s);
+        }
+
+        broadcast(PacketCreator.getPlayerShopChat(player, chat, s));
+    }
+
     public void chat(Client c, String chat) {
         byte s = getVisitorSlot(c.getPlayer());
 
@@ -487,6 +503,14 @@ public class PlayerShop extends AbstractMapObject {
     public List<PlayerShopItem> getItems() {
         synchronized (items) {
             return Collections.unmodifiableList(items);
+        }
+    }
+
+    // SoloMapling: sets the items of a premade shop. Only to be used for converting premade
+    // artificial hired merchants into bot player store permits.
+    public void setItems(List<PlayerShopItem> premadeShop) {
+        synchronized (items) {
+            items.addAll(premadeShop);
         }
     }
 
@@ -627,6 +651,47 @@ public class PlayerShop extends AbstractMapObject {
 
         public int getMesos() {
             return mesos;
+        }
+    }
+    // SoloMapling: bot buy on player store permits. Mirrors buyFromVisitor-facing purchase flow
+    // minus the client interactions; closes the shop when everything is sold out.
+    public boolean botBuy(Character fakechar, PlayerShopItem pItem, int itemPosition, short quantity) {
+        synchronized (items) {
+            Item newItem = pItem.getItem().copy();
+            newItem.setQuantity((short) ((pItem.getItem().getQuantity() * quantity)));
+            visitorLock.lock();
+            try {
+                int price = (int) Math.min((float) pItem.getPrice() * quantity, Integer.MAX_VALUE);
+
+                if (!owner.canHoldMeso(price)) {
+                    fakechar.dropMessage(1, "Transaction failed since the shop owner can't hold any more mesos.");
+                    return false;
+                }
+
+                price -= Trade.getFee(price);
+                owner.gainMeso(price, true);
+
+                SoldItem soldItem = new SoldItem(fakechar.getName(), pItem.getItem().getItemId(), quantity, price);
+                owner.sendPacket(PacketCreator.getPlayerShopOwnerUpdate(soldItem, itemPosition));
+
+                synchronized (sold) {
+                    sold.add(soldItem);
+                }
+
+                pItem.setBundles((short) (pItem.getBundles() - quantity));
+                if (pItem.getBundles() < 1) {
+                    pItem.setDoesExist(false);
+                    if (++boughtnumber == items.size()) {
+                        owner.setPlayerShop(null);
+                        this.setOpen(false);
+                        this.closeShop();
+                        owner.dropMessage(1, "Your items are sold out, and therefore your shop is closed.");
+                    }
+                }
+                return true;
+            } finally {
+                visitorLock.unlock();
+            }
         }
     }
 }

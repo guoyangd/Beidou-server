@@ -107,6 +107,11 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
         }
     }
 
+    // SoloMapling: per-target attack structure (mob object id -> hit delay + damage lines) used by
+    // the bot attack packet builders. Carried over from upstream Cosmic; the classic player path
+    // here still uses AttackInfo.allDamage, both coexist.
+    public record AttackTarget(short delay, List<Integer> damageLines) {}
+
     /**
      * 封装一次距离校验最终采用的坐标样本。
      *

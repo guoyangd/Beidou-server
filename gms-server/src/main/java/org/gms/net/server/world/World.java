@@ -642,7 +642,7 @@ public class World {
 
     public int getWorldCapacityStatus() {
         int worldCap = getChannelsSize() * GameConfig.getServerInt("channel_capacity");
-        int num = players.getSize();
+        int num = players.getRealPlayerCount();   // SoloMapling: bots don't consume capacity
 
         int status;
         if (num >= worldCap) {

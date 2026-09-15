@@ -22,6 +22,7 @@
 package org.gms.net.server;
 
 import org.gms.client.Character;
+import org.gms.soloMapling.ArtificialPlayer.BotHelpers;
 import org.gms.client.Client;
 
 import java.util.ArrayList;
@@ -124,6 +125,24 @@ public class PlayerStorage {
         rlock.lock();
         try {
             return storage.size();
+        } finally {
+            rlock.unlock();
+        }
+    }
+
+    // SoloMapling: real-player count for world capacity gating — bots are scenery, they must never
+    // consume the slots real players log into (3,000+ bots would otherwise permanently show the
+    // world as "full" and reject every login with error 10).
+    public int getRealPlayerCount() {
+        rlock.lock();
+        try {
+            int count = 0;
+            for (Character chr : storage.values()) {
+                if (!BotHelpers.isBot(chr)) {
+                    count++;
+                }
+            }
+            return count;
         } finally {
             rlock.unlock();
         }

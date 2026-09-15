@@ -366,6 +366,17 @@ public class CommandsExecutor {
         addCommand("pnpcremove", 4, PnpcRemoveCommand.class);
         addCommand("pmob", 4, PmobCommand.class);
         addCommand("pmobremove", 4, PmobRemoveCommand.class);
+        // SoloMapling: bot framework GM commands (level 4).
+        addCommand("bot", 4, ArtificialPlayerCommand.class);
+        addCommand("opq", 4, OPQCommands.class);
+        addCommand("reactor", 4, ReactorCommands.class);
+        addCommand("move", 4, BotMoveCommand.class);
+        addCommand("gcmove", 4, GCMoveCommand.class);
+        addCommand("betafmshop", 4, ArtificialFreeMarketCommand.class);
+        addCommand("test", 4, TestDevCommand.class);
+        addCommand("fmbot", 4, FMBotCommand.class);
+        addCommand("tradebot", 4, TradeBotTestCommand.class);
+        addCommand("env", 4, EnvironmentCommand.class);
         addCommand("warptolife", 4, WarpToLifeCommand.class);
 
         commandsNameDesc.add(levelCommandsCursor);

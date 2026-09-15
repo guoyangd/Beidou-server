@@ -341,4 +341,84 @@ public abstract class AbstractMovementPacketHandler extends AbstractPacketHandle
             chr.markRegularMove(beforePos, afterPos);
         }
     }
+
+    // SoloMapling: bot-side twin of the plain movement parser. Deliberately a verbatim copy of
+    // the upstream Cosmic updatePosition body — bots replay recorded packets and must not run
+    // the real-player recording/tracking extras that live in updatePosition above.
+    public static void updatePositionBot(InPacket p, AnimatedMapObject target, int yOffset) throws EmptyMovementException {
+        byte numCommands = p.readByte();
+        if (numCommands < 1) {
+            throw new EmptyMovementException(p);
+        }
+        for (byte i = 0; i < numCommands; i++) {
+            byte command = p.readByte();
+            switch (command) {
+                case 0: // normal move
+                case 5:
+                case 17: { // Float
+                    //Absolute movement - only this is important for the server, other movement can be passed to the client
+                    short xpos = p.readShort(); //is signed fine here?
+                    short ypos = p.readShort();
+                    target.setPosition(new Point(xpos, ypos + yOffset));
+                    p.skip(6); //xwobble = lea.readShort(); ywobble = lea.readShort(); fh = lea.readShort();
+                    byte newstate = p.readByte();
+                    target.setStance(newstate);
+                    p.readShort(); //duration
+                    break;
+                }
+                case 1:
+                case 2:
+                case 6: // fj
+                case 12:
+                case 13: // Shot-jump-back thing
+                case 16: // Float
+                case 18:
+                case 19: // Springs on maps
+                case 20: // Aran Combat Step
+                case 22: {
+                    //Relative movement - server only cares about stance
+                    p.skip(4); //xpos = lea.readShort(); ypos = lea.readShort();
+                    byte newstate = p.readByte();
+                    target.setStance(newstate);
+                    p.readShort(); //duration
+                    break;
+                }
+                case 3:
+                case 4: // tele... -.-
+                case 7: // assaulter
+                case 8: // assassinate
+                case 9: // rush
+                case 11: //chair
+                {
+                    //Teleport movement - same as above
+                    p.skip(8); //xpos = lea.readShort(); ypos = lea.readShort(); xwobble = lea.readShort(); ywobble = lea.readShort();
+                    byte newstate = p.readByte();
+                    target.setStance(newstate);
+                    break;
+                }
+                case 14:
+                    p.skip(9); // jump down (?)
+                    break;
+                case 10: // Change Equip
+                    //ignored server-side
+                    p.readByte();
+                    break;
+                case 15: {
+                    //Jump down movement - stance only
+                    p.skip(12); //short xpos = lea.readShort(); ypos = lea.readShort(); xwobble = lea.readShort(); ywobble = lea.readShort(); fh = lea.readShort(); ofh = lea.readShort();
+                    byte newstate = p.readByte();
+                    target.setStance(newstate);
+                    p.readShort(); // duration
+                    break;
+                }
+                case 21: {//Causes aran to do weird stuff when attacking o.o
+                    p.skip(3);
+                    break;
+                }
+                default:
+                    log.warn("Unhandled Case: {}", command);
+                    throw new EmptyMovementException(p);
+            }
+        }
+    }
 }

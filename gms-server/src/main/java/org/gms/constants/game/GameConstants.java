@@ -120,6 +120,15 @@ public class GameConstants {
         put("dojo", MapId.MU_LUNG_DOJO_HALL);
         put("bosspq", MapId.EXCLUSIVE_TRAINING_CENTER);
         put("fm", MapId.FM_ENTRANCE);
+        // SoloMapling: high-level training maps (for testing grinding bots).
+        put("golem", MapId.FOREST_OF_GOLEM);                 // The Forest of Golem (Sleepywood)
+        put("drakes", MapId.DRAKES_MEAL_TABLE);              // Drake's Meal Table (Sleepywood)
+        put("gardendark", MapId.GARDEN_OF_DARKNESS_I);       // Garden of Darkness I (Orbis)
+        put("cloudpark", MapId.CLOUD_PARK_VI);               // Cloud Park VI (Orbis)
+        put("pathoftime4", MapId.FORGOTTEN_PATH_OF_TIME_IV); // Forgotten Path of Time <4> (Ludibrium)
+        put("sharpcliff", MapId.SHARP_CLIFF_I);              // Sharp Cliff I (El Nath)
+        put("wolves", MapId.WOLF_TERRITORY_V);               // Wolf Territory V (El Nath)
+        put("deadtrees", MapId.FOREST_OF_DEAD_TREES_IV);     // Forest of Dead Trees IV (El Nath)
     }};
 
     public static final List<String> GAME_SONGS = new ArrayList<>(170) {{

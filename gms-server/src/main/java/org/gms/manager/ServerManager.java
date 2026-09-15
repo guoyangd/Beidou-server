@@ -5,6 +5,10 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.gms.ServerApplication;
 import org.gms.constants.net.ServerConstants;
+import org.gms.soloMapling.server.MethodScheduler;
+import org.gms.soloMapling.Environment.EnvironmentManager;
+import org.gms.soloMapling.ArtificialPlayer.BotClientHandler;
+import org.gms.config.GameConfig;
 import org.gms.net.server.Server;
 import org.gms.util.I18nUtil;
 import org.springdoc.core.properties.SpringDocConfigProperties;
@@ -48,6 +52,15 @@ public class ServerManager implements ApplicationContextAware, ApplicationRunner
             if (resource != null) {
                 log.info(I18nUtil.getLogMessage("ServerManager.run.info2"), InetAddress.getLocalHost().getHostAddress(), environment.getProperty("server.port"));
             }
+        }
+
+        // SoloMapling: bot world bootstrap — the headless client must be created only after the
+        // game server (and Spring context it leans on for character loading) is fully up. The
+        // world population is opt-in via game_config server/bot_spawn_on_startup (default off).
+        BotClientHandler.initHeadlessBotClient();
+        if (GameConfig.getServerBoolean("bot_spawn_on_startup")) {
+            log.info("[SoloMapling] bot_spawn_on_startup is enabled - filling world with bots...");
+            MethodScheduler.runAfterDelay(EnvironmentManager::environmentLoadStartup, 1000);
         }
     }
 

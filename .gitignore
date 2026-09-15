@@ -43,3 +43,11 @@ docker/data/
 
 # maven build output
 gms-server/target/
+gms-server/cache/
+
+# 部署包解压副产物与 npm 生成的锁文件(项目用 yarn)
+/BeiDou.jar
+gms-ui/package-lock.json
+
+# 部署发布包(二进制, 不入库; 由 CI/手工从源码构建)
+/beidou-bot-deploy.tar.gz

@@ -91,7 +91,15 @@ public class Server {
         System.setProperty("polyglot.engine.WarnInterpreterOnly", "false"); // Mute GraalVM warning: "The polyglot context is using an implementation that does not support runtime compilation."
     }
 
-    private static final Logger log = LoggerFactory.getLogger(Server.class);
+        // SoloMapling 移植加固：单元测试/独立工具在 Spring 上下文未启动时触达本类，
+    // 静态 Bean 置 null（不实际调用），避免 ExceptionInInitializerError。生产环境
+    // ServerManager.run() 先于 Server.getInstance().init()，行为不变。
+    private static <T> T beanOrNull(Class<T> clz) {
+        var ctx = ServerManager.getApplicationContext();
+        return ctx == null ? null : ctx.getBean(clz);
+    }
+
+private static final Logger log = LoggerFactory.getLogger(Server.class);
     private static Server instance = null;
 
     public static Server getInstance() {
@@ -160,19 +168,19 @@ public class Server {
      */
     private volatile boolean shuttingDown = false;
 
-    private static final NpcService npcService = ServerManager.getApplicationContext().getBean(NpcService.class);
-    private static final NxCouponService nxCouponService = ServerManager.getApplicationContext().getBean(NxCouponService.class);
-    private static final CharacterService characterService = ServerManager.getApplicationContext().getBean(CharacterService.class);
-    private static final AccountService accountService = ServerManager.getApplicationContext().getBean(AccountService.class);
-    private static final NxCodeService nxCodeService = ServerManager.getApplicationContext().getBean(NxCodeService.class);
-    private static final NewYearCardService newYearCardService = ServerManager.getApplicationContext().getBean(NewYearCardService.class);
-    private static final NameChangeService nameChangeService = ServerManager.getApplicationContext().getBean(NameChangeService.class);
-    private static final WorldTransferService worldTransferService = ServerManager.getApplicationContext().getBean(WorldTransferService.class);
-    private static final FamilyService familyService = ServerManager.getApplicationContext().getBean(FamilyService.class);
-    private static final NoteService noteService = ServerManager.getApplicationContext().getBean(NoteService.class);
-    private static final HpMpAlertService hpMpAlertService = ServerManager.getApplicationContext().getBean(HpMpAlertService.class);
-    private static final ServiceProperty serviceProperty = ServerManager.getApplicationContext().getBean(ServiceProperty.class);
-    private static final AutobanConfigService autobanConfigService = ServerManager.getApplicationContext().getBean(AutobanConfigService.class);
+    private static final NpcService npcService = beanOrNull(NpcService.class);
+    private static final NxCouponService nxCouponService = beanOrNull(NxCouponService.class);
+    private static final CharacterService characterService = beanOrNull(CharacterService.class);
+    private static final AccountService accountService = beanOrNull(AccountService.class);
+    private static final NxCodeService nxCodeService = beanOrNull(NxCodeService.class);
+    private static final NewYearCardService newYearCardService = beanOrNull(NewYearCardService.class);
+    private static final NameChangeService nameChangeService = beanOrNull(NameChangeService.class);
+    private static final WorldTransferService worldTransferService = beanOrNull(WorldTransferService.class);
+    private static final FamilyService familyService = beanOrNull(FamilyService.class);
+    private static final NoteService noteService = beanOrNull(NoteService.class);
+    private static final HpMpAlertService hpMpAlertService = beanOrNull(HpMpAlertService.class);
+    private static final ServiceProperty serviceProperty = beanOrNull(ServiceProperty.class);
+    private static final AutobanConfigService autobanConfigService = beanOrNull(AutobanConfigService.class);
 
     private Server() {
         ReadWriteLock worldLock = new ReentrantReadWriteLock(true);
@@ -691,6 +699,9 @@ public class Server {
             futures.add(initExecutor.submit(CashItemFactory::loadAllCashItems));
             futures.add(initExecutor.submit(Quest::loadAllQuests));
             futures.add(initExecutor.submit(SkillbookInformationProvider::loadAllSkillbookInformation));
+            // SoloMapling: bot decoration metadata — one-time WZ scan, parallel with the rest.
+            futures.add(initExecutor.submit(org.gms.soloMapling.itemPool.EquipMetadataCache::initialize));
+            futures.add(initExecutor.submit(org.gms.soloMapling.itemPool.DesirableEquipList::load));
             // Wait on all async tasks to complete
             for (Future<?> future : futures) {
                 future.get();

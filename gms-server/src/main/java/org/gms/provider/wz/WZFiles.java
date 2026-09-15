@@ -40,6 +40,11 @@ public enum WZFiles {
     }
 
     public Path getLanguageFile() {
+        // SoloMapling 移植加固：单元测试/独立工具场景下 Spring 上下文未启动时，
+        // 跳过语言目录（getFile 会自动回退到基础 wz/），避免 NPE。
+        if (ServerManager.getApplicationContext() == null) {
+            return Path.of(DIRECTORY + "-zh-CN", fileName);
+        }
         ServiceProperty serviceProperty = ServerManager.getApplicationContext().getBean(ServiceProperty.class);
         return Path.of(DIRECTORY + "-" + serviceProperty.getLanguage(), fileName);
     }

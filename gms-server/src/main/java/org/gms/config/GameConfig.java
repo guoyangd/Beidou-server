@@ -23,6 +23,11 @@ public class GameConfig {
     private final JSONObject properties = new JSONObject();
 
     private GameConfig() {
+        // SoloMapling 移植加固：单元测试/独立工具在 Spring 上下文未启动时首次触达本类，
+        // 以空配置初始化（各 getServerXxx 返回默认值），避免 ExceptionInInitializerError。
+        if (ServerManager.getApplicationContext() == null) {
+            return;
+        }
         ConfigService configService = ServerManager.getApplicationContext().getBean(ConfigService.class);
         List<GameConfigDO> gameConfigDOS = configService.loadGameConfigs();
         gameConfigDOS.forEach(gameConfigDO -> add(this, gameConfigDO));

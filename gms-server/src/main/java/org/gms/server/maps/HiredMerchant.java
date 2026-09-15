@@ -37,6 +37,7 @@ import org.gms.net.server.channel.Channel;
 import org.gms.net.server.world.World;
 import org.gms.server.ItemInformationProvider;
 import org.gms.server.Trade;
+import static org.gms.soloMapling.ArtificialPlayer.BotHelpers.isBot;
 import org.gms.util.DatabaseConnection;
 import org.gms.util.I18nUtil;
 import org.gms.util.PacketCreator;
@@ -69,13 +70,13 @@ public class HiredMerchant extends AbstractMapObject {
     private static final int VISITOR_HISTORY_LIMIT = 10;
     private static final int BLACKLIST_LIMIT = 20;
 
-    private final int ownerId;
+    protected int ownerId;
     private final int itemId;
     private final int mesos = 0;
     private final int channel;
     private final int world;
     private final long start;
-    private String ownerName = "";
+    protected String ownerName = "";
     private String description = "";
     private final List<PlayerShopItem> items = new LinkedList<>();
     private final List<Pair<String, Byte>> messages = new LinkedList<>();
@@ -956,6 +957,59 @@ public class HiredMerchant extends AbstractMapObject {
 
         public int getMesos() {
             return mesos;
+        }
+    }
+    // SoloMapling: lets an artificial player buy from a hired merchant. Mirrors buy(), minus the
+    // client-packet interactions a bot lacks; offline owner mesos are persisted like the vanilla path.
+    public void botBuy(Character fakechar, PlayerShopItem pItem, short quantity) {
+        synchronized (items) {
+            Item newItem = pItem.getItem().copy();
+            int price = (int) Math.min((float) pItem.getPrice() * quantity, Integer.MAX_VALUE);
+            price -= Trade.getFee(price);
+
+            synchronized (sold) {
+                sold.add(new SoldItem(fakechar.getName(), pItem.getItem().getItemId(), quantity, price));
+            }
+
+            pItem.setBundles((short) (pItem.getBundles() - quantity));
+            if (pItem.getBundles() < 1) {
+                pItem.setDoesExist(false);
+            }
+
+            if (GameConfig.getServerBoolean("use_announce_shop_item_sold")) {
+                announceItemSold(newItem, price, getQuantityLeft(pItem.getItem().getItemId()));
+            }
+
+            Character owner = Server.getInstance().getWorld(world).getPlayerStorage().getCharacterById(ownerId);
+            if (owner != null && !isBot(owner)) {
+                owner.addMerchantMesos(price);
+            } else {
+                try (Connection con = DatabaseConnection.getConnection()) {
+                    long merchantMesos = 0;
+                    try (PreparedStatement ps = con.prepareStatement("SELECT MerchantMesos FROM characters WHERE id = ?")) {
+                        ps.setInt(1, ownerId);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (rs.next()) {
+                                merchantMesos = rs.getInt(1);
+                            }
+                        }
+                    }
+                    merchantMesos += price;
+
+                    try (PreparedStatement ps = con.prepareStatement("UPDATE characters SET MerchantMesos = ? WHERE id = ?", PreparedStatement.RETURN_GENERATED_KEYS)) {
+                        ps.setInt(1, (int) Math.min(merchantMesos, Integer.MAX_VALUE));
+                        ps.setInt(2, ownerId);
+                        ps.executeUpdate();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            try {
+                this.saveItems(false);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }

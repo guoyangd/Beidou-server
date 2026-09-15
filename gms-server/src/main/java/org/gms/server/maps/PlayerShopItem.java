@@ -29,7 +29,12 @@ import org.gms.client.inventory.Item;
 public class PlayerShopItem {
     private final Item item;
     private short bundles;
-    private final int price;
+    private int price;
+
+    // SoloMapling: artificial shops retag prices at setup time.
+    public void setPrice(int price) {
+        this.price = price;
+    }
     private boolean doesExist;
 
     public PlayerShopItem(Item item, short bundles, int price) {

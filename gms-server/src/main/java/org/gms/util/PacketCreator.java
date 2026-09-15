@@ -72,6 +72,7 @@ import org.gms.net.server.PlayerCoolDownValueHolder;
 import org.gms.net.server.Server;
 import org.gms.net.server.channel.Channel;
 import org.gms.net.server.channel.handlers.PlayerInteractionHandler;
+import org.gms.net.server.channel.handlers.AbstractDealDamageHandler.AttackTarget;
 import org.gms.net.server.channel.handlers.SummonDamageHandler.SummonAttackEntry;
 import org.gms.net.server.channel.handlers.WhisperHandler;
 import org.gms.net.server.guild.Alliance;
@@ -2378,6 +2379,71 @@ public class PacketCreator {
         }
     }
 
+    // SoloMapling: AttackTarget-based attack builders (upstream Cosmic signatures) used by bot
+    // attack broadcasts. Overloads of the classic List<Integer> versions above — wire format identical.
+
+    public static Packet closeRangeAttackBot(Character chr, int skill, int skilllevel, int stance,
+                                             int numAttackedAndDamage, Map<Integer, AttackTarget> targets, int speed,
+                                             int direction, int display) {
+        final OutPacket p = OutPacket.create(SendOpcode.CLOSE_RANGE_ATTACK);
+        addAttackBodyBot(p, chr, skill, skilllevel, stance, numAttackedAndDamage, 0, targets, speed, direction,
+                display);
+        return p;
+    }
+
+    public static Packet rangedAttackBot(Character chr, int skill, int skilllevel, int stance, int numAttackedAndDamage,
+                                         int projectile, Map<Integer, AttackTarget> targets, int speed, int direction,
+                                         int display) {
+        final OutPacket p = OutPacket.create(SendOpcode.RANGED_ATTACK);
+        addAttackBodyBot(p, chr, skill, skilllevel, stance, numAttackedAndDamage, projectile, targets, speed, direction,
+                display);
+        p.writeInt(0);
+        return p;
+    }
+
+    public static Packet magicAttackBot(Character chr, int skill, int skilllevel, int stance, int numAttackedAndDamage,
+                                        Map<Integer, AttackTarget> targets, int charge, int speed, int direction,
+                                        int display) {
+        final OutPacket p = OutPacket.create(SendOpcode.MAGIC_ATTACK);
+        addAttackBodyBot(p, chr, skill, skilllevel, stance, numAttackedAndDamage, 0, targets, speed, direction,
+                display);
+        if (charge != -1) {
+            p.writeInt(charge);
+        }
+        return p;
+    }
+
+    private static void addAttackBodyBot(OutPacket p, Character chr, int skill, int skilllevel, int stance,
+                                         int numAttackedAndDamage, int projectile, Map<Integer, AttackTarget> targets,
+                                         int speed, int direction, int display) {
+        p.writeInt(chr.getId());
+        p.writeByte(numAttackedAndDamage);
+        p.writeByte(0x5B);//?
+        p.writeByte(skilllevel);
+        if (skilllevel > 0) {
+            p.writeInt(skill);
+        }
+        p.writeByte(display);
+        p.writeByte(direction);
+        p.writeByte(stance);
+        p.writeByte(speed);
+        p.writeByte(0x0A);
+        p.writeInt(projectile);
+        for (Map.Entry<Integer, AttackTarget> target : targets.entrySet()) {
+            AttackTarget value = target.getValue();
+            if (value != null) {
+                p.writeInt(target.getKey());
+                p.writeByte(0x0);
+                if (skill == 4211006) {
+                    p.writeByte(value.damageLines().size());
+                }
+                for (Integer damageLine : value.damageLines()) {
+                    p.writeInt(damageLine);
+                }
+            }
+        }
+    }
+
     public static Packet throwGrenade(int cid, Point pos, int keyDown, int skillId, int skillLevel) { // packets found thanks to GabrielSin
         OutPacket p = OutPacket.create(SendOpcode.THROW_GRENADE);
         p.writeInt(cid);
@@ -4337,6 +4403,26 @@ public class PacketCreator {
         p.writeString(hint);
         p.writeShort(width);
         p.writeShort(height);
+        p.writeByte(1);
+        return p;
+    }
+
+    // SoloMapling: hint with a duration (seconds) instead of a pixel height — bots use this to
+    // flash timed speech bubbles; wire format identical, only the field semantics differ.
+    public static Packet sendHintTimed(String hint, int width, int duration) {
+        if (width < 1) {
+            width = hint.length() * 10;
+            if (width < 40) {
+                width = 40;
+            }
+        }
+        if (duration > 1 && duration < 5) {
+            duration = 5;
+        }
+        final OutPacket p = OutPacket.create(SendOpcode.PLAYER_HINT);
+        p.writeString(hint);
+        p.writeShort(width);
+        p.writeShort(duration);
         p.writeByte(1);
         return p;
     }
