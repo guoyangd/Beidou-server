@@ -93,6 +93,7 @@ cd docker
 - **改了源码怎么更新**：`docker compose up -d --build`（pom/package.json 未变时依赖层走缓存，几分钟即可）。
 - **改 wz / 脚本**：直接编辑 `docker/data/server/` 下的副本；脚本（NPC/任务等）按客户端粒度热重载，wz 改动需重启容器。注意升级镜像**不会**覆盖这些副本，重置方法见上。
 - **改数据库密码**：需同步三处——`beidou-db` 的 `MYSQL_ROOT_PASSWORD`、`beidou-server` 的 command 凭证、`beidou-backup` 的 `DB_PASSWORD`。
+- **运维规则：凡动过 beidou-db，必跟一步重启服务端**。重建/重启 db 容器后其 IP 可能变化，而运行中的服务端 JVM 会**永久缓存** `beidou-db` 的 DNS 解析结果，导致之后一直向旧 IP 建连，表现为刷屏 `create connection SQLException state 08001` 且**不会自愈**。处置：`docker compose restart beidou-server` 即恢复。若希望自动免疫，可在 JAVA_OPTS 加 `-Dnetworkaddress.cache.ttl=30`（30 秒重解析，属异常处置参数，默认不加、人为处置）。
 - **beidou-db 起不来，日志报 `chown: changing ownership of '/var/lib/mysql/mysql.sock': Operation not permitted`**：MySQL 被 SIGKILL 强杀（Docker daemon 重启/断电，没有 live-restore 时）会在数据目录残留 socket 符号链接，经 Docker Desktop 的文件共享层 chown 会 EPERM 导致崩溃循环。compose 已内置自愈（db 的 entrypoint 启动前自动清理残留 socket）；若仍遇到（旧部署未更新 compose），手动 `rm docker/data/mysql/mysql.sock*` 再 `docker compose up -d` 即可。
 - **从宿主机连数据库**：放开 `beidou-db` 的 `ports: 3306` 注释。
 - **Monaco 编辑器空白**：UI 的代码编辑器运行时从 CDN 加载，离线环境不可用（不影响其他功能）。
