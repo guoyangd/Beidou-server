@@ -11,6 +11,9 @@ services:
         IMAGE_PREFIX: ${IMAGE_PREFIX:-}
     environment:
       TZ: Asia/Shanghai
+      # JVM 默认永久缓存 DNS：beidou-db 容器重建换 IP 后，运行中的服务端会一直连死 IP 报 08001；
+      # 30 秒重解析后可自愈。想固定堆可整行覆盖，例如：-Xmx2G -Duser.timezone=Asia/Shanghai
+      JAVA_OPTS: "-XX:MaxRAMPercentage=50.0 -Duser.timezone=Asia/Shanghai -Dnetworkaddress.cache.ttl=30"
     # 不用宿主机默认的运营商 DNS（实测对 .xyz 域名有超时和 10.0.0.1 污染应答）；
     # 服务名解析仍走 docker 内置 DNS，不受影响
     dns:
