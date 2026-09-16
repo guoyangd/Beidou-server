@@ -60,6 +60,10 @@ services:
   beidou-db:
     container_name: beidou-db
     image: mysql:8.4.0
+    # 残留 socket 清理：MySQL 被 SIGKILL 强杀（daemon 重启/断电）后会在数据目录留下 mysql.sock
+    # （符号链接），经 Docker Desktop 的文件共享层 chown 会报 Operation not permitted 导致崩溃循环；
+    # mysqld 启动前 socket 不可能合法存在，进 entrypoint 前先删掉是安全的
+    entrypoint: ["/bin/sh", "-c", "rm -f /var/lib/mysql/mysql.sock*; exec docker-entrypoint.sh mysqld"]
     environment:
       TZ: Asia/Shanghai
       # 修改密码需同步两处：beidou-server 的 command 里 url 凭证、beidou-backup 的 DB_PASSWORD
