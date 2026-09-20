@@ -37,6 +37,7 @@ import org.gms.server.maps.MapObject;
 import org.gms.server.maps.MapObjectType;
 import org.gms.server.maps.Portal;
 import org.gms.server.maps.Reactor;
+import org.gms.soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage;
 import org.gms.util.I18nUtil;
 
 import java.awt.*;
@@ -109,6 +110,43 @@ public class DebugCommand extends Command {
             case "map":
                 player.dropMessage(6, I18nUtil.getMessage("DebugCommand.message11", player.getMap().getId(), player.getMap().getEventInstance() != null ? player.getMap().getEventInstance().getName() : "null", player.getMap().getAllPlayers().size(), player.getMap().countMonsters(), player.getMap().countReactors(), player.getMap().countItems(), player.getMap().getMapObjects().size()));
                 break;
+
+            case "botvis": {
+                // 机器人可见性分诊（Phase 0）：对当前地图输出服务端真相三件套——
+                // ①characters 列表里的 bot ②mapobjects 注册表(PLAYER型)里的 bot ③每个 bot 的坐标/隐身/离世标志。
+                // 判读：bot 在①不在②→注册表问题；在②但坐标越界(y<地图下界/悬空)→coarse 移动漂移；
+                // 全部正常→服务端已发 spawn，问题在客户端渲染/封包内容。
+                var map = player.getMap();
+                int chars = 0, bots = 0, regPlayers = 0, regBots = 0;
+                var sb = new StringBuilder();
+                sb.append("== botvis map ").append(map.getId()).append(" ==\r\n");
+                for (var bv : map.getCharacters()) {
+                    chars++;
+                    if (CharacterStorage.getAllBots().containsKey(bv.getId())) {
+                        bots++;
+                        sb.append(String.format("[char] %s id=%d pos=(%d,%d) hidden=%s away=%s lv%d %s\r\n",
+                                bv.getName(), bv.getId(), bv.getPosition().x, bv.getPosition().y,
+                                bv.isHidden(), bv.isAwayFromWorld(), bv.getLevel(),
+                                CharacterStorage.getAllBots().get(bv.getId()).getClass().getSimpleName()));
+                    }
+                }
+                for (var bmo : map.getMapObjects()) {
+                    if (bmo.getType() == MapObjectType.PLAYER) {
+                        regPlayers++;
+                        if (CharacterStorage.getAllBots().containsKey(bmo.getObjectId())) {
+                            regBots++;
+                        }
+                    }
+                }
+                sb.append(String.format("characters=%d (bots=%d)  registry PLAYER=%d (bots=%d)%s",
+                        chars, bots, regPlayers, regBots,
+                        bots != regBots ? "  <-- 不一致！bot 不在出生注册表" : ""));
+                if (bots == 0) {
+                    sb.append("\r\n(本图 characters 里没有任何 bot)");
+                }
+                player.dropMessage(6, sb.toString());
+                break;
+            }
 
             case "mobsp":
                 player.getMap().reportMonsterSpawnPoints(player);

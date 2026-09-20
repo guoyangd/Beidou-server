@@ -10,6 +10,7 @@ import java.util.List;
 @Builder
 public class ChrOnlineListRtnDTO {
     private int world;
+    private int channel;
     private int id;
     private String name;
     private int map;

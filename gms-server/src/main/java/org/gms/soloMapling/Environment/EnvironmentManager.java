@@ -3,6 +3,7 @@ package org.gms.soloMapling.Environment;
 import org.gms.client.Character;
 import org.gms.client.Job;
 import org.gms.server.maps.MapleMap;
+import org.gms.soloMapling.ArtificialPlayer.BotExpeditionSystem.BotExpeditionRecruiter;
 import org.gms.soloMapling.ArtificialPlayer.BotGeneration;
 import org.gms.soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands;
 import org.gms.soloMapling.ArtificialPlayer.BotDecoratorSystem.BotDecorate;
@@ -105,7 +106,6 @@ public class EnvironmentManager {
         runWave(1, "Essentials", List.of(
                 () -> spawnCasinoNpcs(),
                 () -> spawnTutorialBot(),
-                () -> spawnHenesysBotsBatch(5, 0, 0, 0),
                 () -> populateFreeMarketRegion("henesys"),
                 () -> spawnFMEntranceBotsBatch(3, 3, 3)
         ));
@@ -119,11 +119,7 @@ public class EnvironmentManager {
                 () -> spawnGachaBotsHenesys()
         ));
 
-        runWave(3, "Henesys population", List.of(
-                () -> spawnJQBotsPetPark(),
-                () -> spawnHenesysBotsBatch(5, 5, 0, 3),
-                () -> spawnFillerBotsHenesys()
-        ));
+        // Wave 3 (Henesys population) 已按业主指令移除：村民/填充/跳跳/宠物公园社交属纯氛围（2026-09-17）
         SocialHotPotatoManager.getInstance().start();
         ConversationManager.getInstance().start();
 
@@ -132,16 +128,11 @@ public class EnvironmentManager {
                 () -> spawnFMEntranceBotsBatch(3, 3, 3),
                 () -> spawnMerchBotsBatch("m1", 1, 1, 0),
                 () -> spawnMerchBotsBatch("m2", 1, 1, 1),
-                () -> spawnMerchBotsBatch("m5", 1, 1, 1),
-                () -> spawnFillerBotsHenesysMarket()
+                () -> spawnMerchBotsBatch("m5", 1, 1, 1)
         ));
 
         runWave(5, "Henesys sub-areas", List.of(
                 () -> populateFreeMarketRegion("elnath"),
-                () -> spawnHenesysBotsBatch(5, 5, 5, 2),
-                () -> spawnFillerBotsHenesysPark(),
-                () -> spawnFillerBotsPotionShop(),
-                () -> spawnFillerBotsGameZone(),
                 () -> spawnGameZoneHostBots()
         ));
 
@@ -149,8 +140,7 @@ public class EnvironmentManager {
                 () -> spawnBlackjackTables(),
                 () -> spawnDropGameBotPotionShop(),
                 () -> spawnDropGameSpectatorsPotionShop(),
-                () -> spawnSocialBotsPetPark(),
-                () -> convertRandomFillersToScrollBots()
+                () -> spawnScrollBotsDirect()
         ));
 
         runWave(7, "Late arrivals", List.of(
@@ -179,18 +169,18 @@ public class EnvironmentManager {
         // trips (TrainingBot.doInit / TOWN_SHOPS).
         runWave(8, "Training bots", List.of(
                 () -> GCMovement.mapsWithinHops(MapId.HENESYS, 1),          // prewarm the portal graph once
-                () -> spawnTrainingBotsAt(MapId.LITH_HARBOUR, 6, 1, 15),
-                () -> spawnTrainingBotsAt(MapId.HENESYS, 68, 10, 95),
-                () -> spawnTrainingBotsAt(MapId.KERNING_CITY, 68, 10, 65),
-                () -> spawnTrainingBotsAt(MapId.PERION, 68, 10, 65),
-                () -> spawnTrainingBotsAt(MapId.ELLINIA, 68, 10, 65),
-                () -> spawnTrainingBotsAt(MapId.SLEEPYWOOD, 68, 25, 95),  // town: Sleepy Dungeon + Ant Tunnel I-IV + Forest of Golem
-                () -> spawnTrainingBotsAt(MapId.ANT_TUNNEL_PARK, 54, 40, 95), // deep hub (~9 hops in): Cave of Evil Eye / Grave of Mushmom
-                () -> spawnTrainingBotsAt(MapId.ORBIS, 66, 30, 86),
-                () -> spawnTrainingBotsAt(MapId.LUDIBRIUM, 60, 25, 95),
-                () -> spawnTrainingBotsAt(MapId.PATH_OF_TIME_HUB, 48, 70, 95), // deep hub: Forgotten Path of Time / Clocktower (Platoon Chronos, Papa Pixie → Papulatus)
-                () -> spawnTrainingBotsAt(MapId.EL_NATH, 60, 50, 80),  // town: shops at El Nath Market (potion / equip); grinds Ice Valley + cloud maps
-                () -> spawnTrainingBotsAt(MapId.SHARP_CLIFF_I, 60, 60, 90), // deep hub (Jeff one-way from Ice Valley II): Sharp Cliff II / Wolf Territory / Forest of Dead Trees / Dead Mine
+                () -> spawnTrainingBotsAt(MapId.LITH_HARBOUR, 9, 1, 15),
+                () -> spawnTrainingBotsAt(MapId.HENESYS, 102, 10, 95),
+                () -> spawnTrainingBotsAt(MapId.KERNING_CITY, 102, 10, 65),
+                () -> spawnTrainingBotsAt(MapId.PERION, 102, 10, 65),
+                () -> spawnTrainingBotsAt(MapId.ELLINIA, 102, 10, 65),
+                () -> spawnTrainingBotsAt(MapId.SLEEPYWOOD, 102, 25, 95),  // town: Sleepy Dungeon + Ant Tunnel I-IV + Forest of Golem
+                () -> spawnTrainingBotsAt(MapId.ANT_TUNNEL_PARK, 81, 40, 95), // deep hub (~9 hops in): Cave of Evil Eye / Grave of Mushmom
+                () -> spawnTrainingBotsAt(MapId.ORBIS, 99, 30, 86),
+                () -> spawnTrainingBotsAt(MapId.LUDIBRIUM, 90, 25, 95),
+                () -> spawnTrainingBotsAt(MapId.PATH_OF_TIME_HUB, 72, 70, 95), // deep hub: Forgotten Path of Time / Clocktower (Platoon Chronos, Papa Pixie → Papulatus)
+                () -> spawnTrainingBotsAt(MapId.EL_NATH, 90, 50, 80),  // town: shops at El Nath Market (potion / equip); grinds Ice Valley + cloud maps
+                () -> spawnTrainingBotsAt(MapId.SHARP_CLIFF_I, 90, 60, 90), // deep hub (Jeff one-way from Ice Valley II): Sharp Cliff II / Wolf Territory / Forest of Dead Trees / Dead Mine
 
                 () -> spawnTrainingBotsAt(MapId.HENESYS, 8, 1,  9),  // beginner sword grinders
                 () -> spawnTrainingBotsAt(MapId.KERNING_CITY, 6, 1,  9),  // beginner sword grinders
@@ -203,11 +193,31 @@ public class EnvironmentManager {
         // that until now had only grinders passing through, plus roaming wanderers. Runs after wave 8 so the
         // town nav graphs are already baked by the training cohorts spawned there. Counts are fixed per town
         // in TownPresence.yaml. One task per town so the cohorts spawn in parallel across the pool (like wave 8).
-        List<Runnable> townTasks = new ArrayList<>();
-        for (TownPresenceConfig.TownEntry town : TownPresenceConfig.towns()) {
-            townTasks.add(() -> spawnTown(town));
-        }
-        runWave(9, "Town presence", townTasks);
+        // Wave 9 (Town presence 七镇氛围) 已按业主指令移除（2026-09-17）：纯氛围类，保留代码以备恢复。
+
+        // 远征 Boss 陪打 bot：站桩在远征入口，报名中的远征由 BotExpeditionRecruiter 自动收编。
+        // v1: Showa/Balrog；v2: 全量铺开（Zakum/HT/Scarga/PinkBean）——成员入列走 Expedition.addMember
+        // 无等级/前置校验（等级与前置只对来找 NPC 对话的真人查），前置道具（如火眼）由队长真人持有即可。
+        runWave(10, "Expedition bots", List.of(
+                () -> spawnExpeditionBotsAt(801040004, 6, 100, 130),  // Showa 入口（洗浴街，NPC 9120201）
+                () -> spawnExpeditionBotsAt(105100100, 6, 50, 80),    // Balrog 入口（地下庙宇广场）
+                () -> spawnExpeditionBotsAt(211042400, 6, 110, 140),  // Zakum 入口（死矿祭坛，NPC 2030013）
+                () -> spawnExpeditionBotsAt(240050400, 6, 130, 160),  // Horntail 入口（神木生命之穴）
+                () -> spawnExpeditionBotsAt(551030100, 6, 110, 140),  // Scarga 入口（马来西亚奇幻主题公园）
+                () -> spawnExpeditionBotsAt(270050000, 6, 150, 180)   // PinkBean 入口（时间神殿起源之塔）
+        ));
+        // 打怪/防守型 PQ 陪打 bot：入口站桩，玩家右键邀请入队（无条件接受），队长找 NPC 开本全队进图。
+        // 谜题型 PQ（KPQ/LPQ/LMPQ/MPQ/EPQ）依赖 bot-NPC 对话原语，待 v3。
+        runWave(11, "PQ combat bots", List.of(
+                () -> spawnPQBotsAt(100000200, 6, 15, 25),   // HPQ 月妙（射手村公园，NPC 1012112）
+                () -> spawnPQBotsAt(889100000, 6, 21, 30),   // 雪人 PQ（欢乐谷，NPC 9105004）
+                () -> spawnPQBotsAt(701010322, 6, 40, 70),   // 蜈蚣 PQ（东方神州，NPC 9310006）
+                () -> spawnPQBotsAt(702070400, 6, 125, 155), // 妖僧 PQ（少林密室，NPC 9310039）
+                () -> spawnPQBotsAt(970030000, 6, 60, 100),  // BossRushPQ（连战大厅，NPC 9977777）
+                () -> spawnPQBotsAt(251010404, 6, 60, 95)    // PPQ 海盗（赫卜镇，NPC 2094000）
+        ));
+
+        BotExpeditionRecruiter.start();
 
         BotDecorationQueue.start();
         BotEquipChecker.start();
@@ -233,6 +243,70 @@ public class EnvironmentManager {
         int spawned = spawnScatteredTrainingBots(map, sp, n, loLevel, hiLevel).size();
         debugprint(fmt("TrainingBots: {} spawned on map {} (lv {}..{})", spawned, townMapId, loLevel, hiLevel));
         return spawned;
+    }
+
+    // 远征陪打 bot：在远征入口的出生点附近聚成一队待命小队（不做平台散布——远征队形更自然），
+    // 生成后注册为 EXPEDITION_BOT（BossRaidBot：站桩待命 / 进本战斗）。
+    private static int spawnExpeditionBotsAt(int entryMapId, int n, int loLevel, int hiLevel) {
+        return spawnStationedBots("ExpeditionBots", entryMapId, n, loLevel, hiLevel,
+                BotTypeManager.BotType.EXPEDITION_BOT);
+    }
+
+    // PQ 陪打 bot：同远征的入口站桩生成，类型换成 PQ_BOT（额外具备无条件接受组队邀请）
+    private static int spawnPQBotsAt(int entryMapId, int n, int loLevel, int hiLevel) {
+        return spawnStationedBots("PQBots", entryMapId, n, loLevel, hiLevel,
+                BotTypeManager.BotType.PQ_BOT);
+    }
+
+    // 卷轴商直接生成：原 convertRandomFillersToScrollBots 依赖的填充人已按业主指令移除，
+    // 改为在射手村药店平台直接摆 2 个卷轴商（保留收购卷轴功能）。
+    private static void spawnScrollBotsDirect() {
+        MapleMap map = getMapleMapById(HENESYS_POTION_SHOP);
+        if (map == null || map.getPortal(0) == null) {
+            debugprint("ScrollBots: no potion shop map");
+            return;
+        }
+        Point sp = map.getPortal(0).getPosition();
+        List<Integer> ids = new ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+            int baseClass = BotDecorate.rollBaseClass();
+            try {
+                int botId = BotGeneration.createBot(sp, map, baseClass, 35, 55);
+                if (botId > 0) {
+                    ids.add(botId);
+                }
+            } catch (Exception e) {
+                debugprint(fmt("ScrollBots: create failed ({})", e.getMessage()));
+            }
+        }
+        setAndStartBots(ids, BotTypeManager.BotType.SCROLL_BOT);
+        debugprint(fmt("ScrollBots: {} spawned on potion shop", ids.size()));
+    }
+
+    // 通用「入口站桩小队」生成：n 个随机职业 bot 落在出生点附近，注册为指定类型
+    private static int spawnStationedBots(String tag, int entryMapId, int n, int loLevel, int hiLevel,
+                                          BotTypeManager.BotType type) {
+        MapleMap map = getMapleMapById(entryMapId);
+        if (map == null || map.getPortal(0) == null) {
+            debugprint(fmt("{}: no map / spawn portal for {}", tag, entryMapId));
+            return 0;
+        }
+        Point sp = map.getPortal(0).getPosition();
+        List<Integer> ids = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            int baseClass = BotDecorate.rollBaseClass();
+            try {
+                int botId = BotGeneration.createBot(sp, map, baseClass, loLevel, hiLevel);
+                if (botId > 0) {
+                    ids.add(botId);
+                }
+            } catch (Exception e) {
+                debugprint(fmt("{}: create failed on {} ({})", tag, entryMapId, e.getMessage()));
+            }
+        }
+        setAndStartBots(ids, type);
+        debugprint(fmt("{}: {} spawned on map {} (lv {}..{})", tag, ids.size(), entryMapId, loLevel, hiLevel));
+        return ids.size();
     }
 
     // Spawn n training bots scattered across the map's reachable platforms - an organic ground spot per

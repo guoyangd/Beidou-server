@@ -478,9 +478,9 @@ class CampStrategy implements GrindStrategy {
         int spotX1 = s.anchor().x + s.radius() + GrindBrain.ACQUIRE_MARGIN_PX;
         int[] band = personalBand(chr, s);
         if (band == null) {
-            return SpotFinder.bestClusterHostileInBand(chr.getMap(), s.anchor(), s.radius(), spotX0, spotX1, from, CLUSTER_RADIUS_PX);
+            return SpotFinder.bestClusterHostileInBand(chr.getMap(), s.anchor(), s.radius(), spotX0, spotX1, from, CLUSTER_RADIUS_PX, b.claimedByOthers, b.nearbyBotPositions);
         }
-        Monster t = SpotFinder.bestClusterHostileInBand(chr.getMap(), s.anchor(), s.radius(), band[0], band[1], from, CLUSTER_RADIUS_PX);
+        Monster t = SpotFinder.bestClusterHostileInBand(chr.getMap(), s.anchor(), s.radius(), band[0], band[1], from, CLUSTER_RADIUS_PX, b.claimedByOthers, b.nearbyBotPositions);
         if (t != null) {
             bandFallback = false;
             bandEmptySinceMs = 0L;
@@ -491,7 +491,7 @@ class CampStrategy implements GrindStrategy {
         }
         if (bandFallback || now() - bandEmptySinceMs >= BAND_FALLBACK_MS) {
             bandFallback = true;
-            return SpotFinder.bestClusterHostileInBand(chr.getMap(), s.anchor(), s.radius(), spotX0, spotX1, from, CLUSTER_RADIUS_PX);
+            return SpotFinder.bestClusterHostileInBand(chr.getMap(), s.anchor(), s.radius(), spotX0, spotX1, from, CLUSTER_RADIUS_PX, b.claimedByOthers, b.nearbyBotPositions);
         }
         return null; // brief band lull — hold the segment rather than instantly poach the neighbour's
     }

@@ -53,6 +53,7 @@ import static org.gms.soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommand
 import static org.gms.soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands.BotSpeak;
 import static org.gms.soloMapling.ArtificialPlayer.BotHelpers.isBot;
 import static org.gms.soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.botCancelChair;
+import static org.gms.soloMapling.ArtificialPlayer.BotGeneration.warpBotToLocation;
 import static org.gms.soloMapling.BotLogger.log;
 
 // A roaming grinder. Spawns in a base town, travels out to a level-appropriate map with mobs, grinds
@@ -169,7 +170,7 @@ public class TrainingBot extends BotSM {
     private static final Set<TrainingBot> ACTIVE_GRINDERS = ConcurrentHashMap.newKeySet();
     private static volatile boolean combatTickerStarted = false;
 
-    private static synchronized void ensureCombatTicker() {
+    protected static synchronized void ensureCombatTicker() {
         if (combatTickerStarted) {
             return;
         }
@@ -220,10 +221,10 @@ public class TrainingBot extends BotSM {
     }
 
     // ── Macro brain state ────────────────────────────────────────────────────
-    private enum Phase { INIT, IN_TOWN, SHOP_TRAVEL, SHOP_DWELL, SHOP_RETURN, DECIDE, GO_TRAIN, GRIND, GO_TOWN,
+    protected enum Phase { INIT, IN_TOWN, SHOP_TRAVEL, SHOP_DWELL, SHOP_RETURN, DECIDE, GO_TRAIN, GRIND, GO_TOWN,
         BREAK_TRAVEL, BREAK_REST }
 
-    private volatile Phase phase = Phase.INIT;
+    protected volatile Phase phase = Phase.INIT;
     private boolean phaseEntered = false;     // has this phase run its one-time setup?
     private long phaseDeadlineMs = 0;         // travel timeout / town dwell
 
@@ -235,7 +236,7 @@ public class TrainingBot extends BotSM {
     private int travelLastMapId = -1;
     private Point travelLastPos = null;
 
-    private int homeMapId = -1;           // the spawn town; GO_TOWN returns here
+    protected int homeMapId = -1;           // the spawn town; GO_TOWN returns here
     private boolean firstTrip = true;     // first decision to go train: maybe warp straight there (see FIRST_TRIP_TELEPORT_CHANCE)
     private boolean midSessionGrind = false; // next grind starts partially elapsed (warped/in-place first trip — see MID_SESSION_FLOOR_MS)
     private final List<Integer> shopQueue = new ArrayList<>(); // store maps still to visit this town stop
@@ -256,7 +257,7 @@ public class TrainingBot extends BotSM {
     // ── Grind engine + macro watchdog state ──
     // The per-bot localized grind sub-FSM (SELECT_SPOT→TRAVEL→FIGHT⇄WAIT→RELOCATE). TrainingBot keeps the
     // macro brain and delegates each observed combat tick to it; it owns the combat heartbeat the watchdog reads.
-    private final GrindBrain grind = new GrindBrain(this::debugChat);
+    public final GrindBrain grind = new GrindBrain(this::debugChat);
     private boolean teleportedThisEpisode = false; // macro watchdog: a portal-teleport has already been tried this stuck episode
     private long lastRepairMs = 0L;             // macro watchdog: last self-repair action (cooldown gate)
 
@@ -281,16 +282,16 @@ public class TrainingBot extends BotSM {
     // keywords narrow so a typed sentence like "how about joining my party" can't hijack the
     // party roll (greedy "how"/"train" did exactly that in live test round 2).
     private final BotOptionMenu soloMenu = new BotOptionMenu(this,
-            List.of("How's the training?", "Wanna party up?", "Goodbye"),
-            List.of(List.of("hows", "how is", "how goes"),
-                    List.of("party", "team", "join"),
-                    List.of("bye", "goodbye", "cya", "later")),
+            List.of("练级怎么样？", "想组队吗？", "再见"),
+            List.of(List.of("hows", "how is", "how goes", "怎么样", "如何"),
+                    List.of("party", "team", "join", "组队", "组我", "一起"),
+                    List.of("bye", "goodbye", "cya", "later", "再见", "拜拜")),
             this::onSoloMenuSelect);
     private final BotOptionMenu partyMenu = new BotOptionMenu(this,
-            List.of("How's the training?", "Follow me!", "Goodbye"),
-            List.of(List.of("hows", "how is", "how goes"),
-                    List.of("follow", "come", "lead"),
-                    List.of("bye", "goodbye", "cya", "later")),
+            List.of("练级怎么样？", "跟我走！", "再见"),
+            List.of(List.of("hows", "how is", "how goes", "怎么样", "如何"),
+                    List.of("follow", "come", "lead", "跟我", "走", "带路"),
+                    List.of("bye", "goodbye", "cya", "later", "再见", "拜拜")),
             this::onPartyMenuSelect);
 
     public TrainingBot(Character character) {
@@ -334,7 +335,7 @@ public class TrainingBot extends BotSM {
         super.checkPrioritySpeed();
     }
 
-    private void enterPhase(Phase next) {
+    protected void enterPhase(Phase next) {
         if (phase == Phase.SHOP_DWELL) {
             BotWanderSystem.stop(getChr()); // leaving a shop: end the flavor wander before travelling out
         }
@@ -705,8 +706,14 @@ public class TrainingBot extends BotSM {
     }
 
     // At a training map: anchor on a platform, swing (when observed) via the shared ticker, accrue EXP.
-    private void doGrind() {
+    protected void doGrind() {
         Character chr = getChr();
+
+        // 组队跟随：队长已换图 → 不等会话计时器，立即中断并跟过去
+        if (followPartyLeaderIfMoved(chr)) {
+            return;
+        }
+
         if (!phaseEntered) {
             phaseEntered = true;
             teleportedThisEpisode = false;
@@ -959,7 +966,7 @@ public class TrainingBot extends BotSM {
         }
     }
 
-    private void leaveGrind() {
+    protected void leaveGrind() {
         ACTIVE_GRINDERS.remove(this);
         grind.release(getChr()); // drop the spot claim + reset combat state
         clearTrainTarget(); // release this map's occupancy slot
@@ -1036,6 +1043,15 @@ public class TrainingBot extends BotSM {
     }
 
     private Character firstRealPartyMember(Party party) {
+        // 优先返回队长（bot 应该跟队长走，不是跟第一个碰到的真人）
+        PartyCharacter leaderPc = party.getLeader();
+        if (leaderPc != null) {
+            Character leader = leaderPc.getPlayer();
+            if (leader != null && !isBot(leader) && leader.getMap() != null) {
+                return leader;
+            }
+        }
+        // 队长离线/是 bot 时退而求其次：第一个在线真人
         for (PartyCharacter pc : party.getMembers()) {
             Character p = pc == null ? null : pc.getPlayer();
             if (p != null && !isBot(p) && p.getMap() != null) {
@@ -1087,6 +1103,43 @@ public class TrainingBot extends BotSM {
                 partyMenu.close(player);
             }
         }
+    }
+
+    // 组队跟随：队长不在本图 → leaveGrind + 直接 warp 到队长所在图的出生点。
+    // 返回 true 表示本 tick 已处理（调用方跳过后续逻辑）。
+    // 3 秒冷却防止队长在两个图之间反复横跳时 bot 疯狂 warp。
+    private long lastFollowWarpMs = 0;
+
+    private boolean followPartyLeaderIfMoved(Character chr) {
+        var party = chr.getParty();
+        if (party == null) return false;
+        var leaderPc = party.getLeader();
+        if (leaderPc == null) return false;
+        Character leader = leaderPc.getPlayer();
+        if (leader == null || leader.getMapId() == chr.getMapId()) return false;
+
+        long now = System.currentTimeMillis();
+        if (now - lastFollowWarpMs < 3_000) return false; // 冷却
+        lastFollowWarpMs = now;
+
+        leaveGrind();
+        var leaderMap = leader.getMap();
+        if (leaderMap != null && leaderMap.getPortal(0) != null) {
+            // 落点散开：以 portal 为锚点，用 BotSpotPicker 在可达平台上选不同位置（同队列 bot 不叠一个点）
+            var anchor = leaderMap.getPortal(0).getPosition();
+            var spots = org.gms.soloMapling.ArtificialPlayer.BotGrindSystem.BotSpotPicker
+                    .pickGroundSpots(leaderMap, anchor.x, anchor.y, 4);
+            int slot = (int)(chr.getId() % Math.max(1, spots.size()));
+            var pt = (slot < spots.size()) ? spots.get(slot) : anchor;
+            try {
+                warpBotToLocation(chr, pt, leaderMap);
+                debugChat("FOLLOW: warped to leader's map " + leader.getMapId() + " at scattered pos");
+            } catch (Exception e) {
+                debugChat("FOLLOW: warp failed: " + e.getMessage());
+            }
+        }
+        enterPhase(Phase.GRIND); // 到了新图重新进入战斗
+        return true;
     }
 
     private void optPartyAsk(Character player) {

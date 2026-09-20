@@ -702,6 +702,13 @@ public final class SpotFinder {
     // degrades to plain nearest.
     public static Monster bestClusterHostileInBand(MapleMap map, Point anchor, int radius,
                                                    int x0, int x1, Point from, int clusterRadius) {
+        return bestClusterHostileInBand(map, anchor, radius, x0, x1, from, clusterRadius, null, null);
+    }
+
+    public static Monster bestClusterHostileInBand(MapleMap map, Point anchor, int radius,
+                                                   int x0, int x1, Point from, int clusterRadius,
+                                                   java.util.Set<Integer> claimedOids,
+                                                   java.util.List<Point> nearbyBotPositions) {
         if (map == null || anchor == null) {
             return null;
         }
@@ -720,12 +727,30 @@ public final class SpotFinder {
             }
             band.add(m);
         }
-        return bestClustered(band, ref, clusterRadius);
+        return bestClustered(band, ref, clusterRadius, claimedOids, nearbyBotPositions);
     }
 
     // Shared cluster scorer: the band member with the most same-band neighbours within clusterRadius,
     // tie-broken by distance from `ref`. clusterRadius <= 0 degrades to plain nearest.
     private static Monster bestClustered(List<Monster> band, Point ref, int clusterRadius) {
+        return bestClustered(band, ref, clusterRadius, null, null);
+    }
+
+    // 个人空间半径（px）：怪距离另一个 bot ≤ 此值时被视为"那人的怪"
+    private static final int PERSONAL_SPACE_PX = 150;
+    private static final long PERSONAL_SPACE_SQ = (long) PERSONAL_SPACE_PX * PERSONAL_SPACE_PX;
+    // 目标锁定惩罚分（比最大簇分高，确保除非没有别的选择否则一定避开）
+    private static final int TARGET_CLAIM_PENALTY = 5;
+    // 空间占据惩罚分（怪在另一个 bot 的个人空间内）
+    private static final int SPACE_CLAIM_PENALTY = 5;
+
+    // Anti-dogpile + personal-space: scoring with two exclusion dimensions:
+    //   1. targetOid claim: another bot's sticky target gets -TARGET_CLAIM_PENALTY
+    //   2. spatial claim: a mob within PERSONAL_SPACE_PX of another bot's position gets -SPACE_CLAIM_PENALTY
+    // Combined worst case -10 (both) vs max cluster bonus ~5 → effectively hard exclusion with a fallback.
+    private static Monster bestClustered(List<Monster> band, Point ref, int clusterRadius,
+                                          java.util.Set<Integer> claimedOids,
+                                          java.util.List<Point> nearbyBotPositions) {
         Monster best = null;
         int bestScore = Integer.MIN_VALUE;
         double bestSq = Double.MAX_VALUE;
@@ -737,6 +762,19 @@ public final class SpotFinder {
                 for (Monster o : band) {
                     if (o != m && mp.distanceSq(o.getPosition()) <= crSq) {
                         score++;
+                    }
+                }
+            }
+            // 维度1：已被队友锁定
+            if (claimedOids != null && !claimedOids.isEmpty() && claimedOids.contains(m.getObjectId())) {
+                score -= TARGET_CLAIM_PENALTY;
+            }
+            // 维度2：怪在另一个 bot 的个人空间内（"那是他的怪，我打别处的"）
+            if (nearbyBotPositions != null && !nearbyBotPositions.isEmpty()) {
+                for (Point bp : nearbyBotPositions) {
+                    if (mp.distanceSq(bp) <= PERSONAL_SPACE_SQ) {
+                        score -= SPACE_CLAIM_PENALTY;
+                        break; // 一个人就够了，不叠加
                     }
                 }
             }

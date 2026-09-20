@@ -87,6 +87,7 @@
             :width="120"
             align="center"
           />
+          <a-table-column title="频道" data-index="channel" :width="70" align="center" />
           <a-table-column
             :title="$t('account.player.job')"
             data-index="job"

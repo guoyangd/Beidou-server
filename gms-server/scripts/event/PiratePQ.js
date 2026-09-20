@@ -76,7 +76,23 @@ function setEventExclusives(eim) {
     eim.setExclusiveItems(itemSet);
 }
 
-function setEventRewards(eim) {}
+function setEventRewards(eim) {
+    var itemSet, itemQty, evLevel;
+
+    evLevel = 1;    //Rewards at clear PQ
+    // Pirate-themed reward pool (repeated entries act as weights): 10% colored pirate hats, 30% scrolls, 60% potions/ores
+    itemSet = [1002327, 1002328, 1002329, 1002330,
+               2040505, 2040514, 2040505, 2040514, 2040002, 2040602, 2040402, 2040802, 2040002, 2040602, 2040402, 2040802,
+               2000003, 2000006, 2022000, 4003000, 4010003, 4010005, 4020004, 4020006,
+               2000003, 2000006, 2022000, 4003000, 4010003, 4010005, 4020004, 4020006,
+               2000003, 2000006, 2022000, 4003000, 4010003, 4010005, 4020004, 4020006];
+    itemQty = [1, 1, 1, 1,
+               1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+               80, 50, 15, 30, 8, 8, 3, 3,
+               80, 50, 15, 30, 8, 8, 3, 3,
+               80, 50, 15, 30, 8, 8, 3, 3];
+    eim.setEventRewards(evLevel, itemSet, itemQty);
+}
 
 function getEligibleParty(party) {      //selects, from the given party, the team that is allowed to attempt this event
     var eligible = [];
@@ -343,6 +359,11 @@ function clearPQ(eim) {
     var chests = parseInt(eim.getProperty("openedChests"));
     var expGain = (chests == 0 ? 28000 : (chests == 1 ? 35000 : 42000));
     eim.giveEventPlayersExp(expGain);
+
+    var party = eim.getPlayers();
+    for (var i = 0; i < party.size(); i++) {
+        eim.giveEventReward(party.get(i));
+    }
 
     eim.warpEventTeam(925100600);
 }

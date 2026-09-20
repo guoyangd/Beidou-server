@@ -121,10 +121,19 @@ public final class GrindBrain {
 
     // One combat tick (already gated by the caller on running && phase == GRIND). Observed maps run the
     // active strategy; unobserved maps no-op here (the macro tick accrues abstract EXP instead).
+    // Anti-dogpile: OID 集合，包含本图上其他 bot 的当前锁定目标（不含自己）。
+    java.util.Set<Integer> claimedByOthers = null;
+    // 个人空间：本图上其他 bot 的站立坐标（不含自己，同 ledge/同高度才计入——不同平台的 bot 不互斥）。
+    // 用于目标选择的空间惩罚：怪在另一个 bot 身边 → 不打，去找别处的怪。
+    java.util.List<java.awt.Point> nearbyBotPositions = null;
+
     public void tick(Character chr) {
         if (chr == null) {
             return;
         }
+        // 每次进入 tick 先刷新「队友在打什么 + 队友站在哪」（轻量：一次遍历）
+        claimedByOthers = collectClaimedOids(chr);
+        nearbyBotPositions = collectNearbyBotPositions(chr);
         // Mid-episode map change (GM warp etc.) or a GM style override: swap strategies safely. The
         // release path uses the RECORDED claim map, never the new one, so no ghost claim survives;
         // then re-anchor here under the (possibly forced) style.
@@ -346,6 +355,39 @@ public final class GrindBrain {
     // Raw narration line (GrindLoot applies its own throttle before calling).
     void debugLine(String msg) {
         debug.accept(msg);
+    }
+
+    // 收集本图上其他 bot 的站立坐标（同 Y 带 ±60px 内才计入——同层才互斥，不同平台不打架）
+    private java.util.List<java.awt.Point> collectNearbyBotPositions(Character self) {
+        java.util.List<java.awt.Point> pts = new java.util.ArrayList<>();
+        if (self == null || self.getMap() == null || self.getPosition() == null) return pts;
+        for (Character other : self.getMap().getAllPlayers()) {
+            if (other.getId() == self.getId()) continue;
+            if (!org.gms.soloMapling.ArtificialPlayer.BotHelpers.isBot(other)) continue;
+            var op = other.getPosition();
+            if (op == null) continue;
+            // 同层判定：Y 差 ≤60px 视为同平台
+            if (Math.abs(op.y - self.getPosition().y) <= 60) {
+                pts.add(new java.awt.Point(op.x, op.y));
+            }
+        }
+        return pts;
+    }
+
+    // 收集本图上其他 bot 的锁定目标 OID（不含 selfId）。空图/没有冲突时返回空集合（不用 null——
+    // SpotFinder 的惩罚分支只在非空时生效）。
+    private java.util.Set<Integer> collectClaimedOids(Character self) {
+        java.util.Set<Integer> oids = new java.util.HashSet<>();
+        if (self == null || self.getMap() == null) return oids;
+        for (Character other : self.getMap().getAllPlayers()) {
+            if (other.getId() == self.getId()) continue;
+            if (!org.gms.soloMapling.ArtificialPlayer.BotHelpers.isBot(other)) continue;
+            var bot = org.gms.soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage.getAllBots().get(other.getId());
+            if (!(bot instanceof org.gms.soloMapling.ArtificialPlayer.BotTypes.TrainingBot tb)) continue;
+            int oid = tb.grind.targetOid;
+            if (oid > 0) oids.add(oid);
+        }
+        return oids;
     }
 
     static int clamp(int v, int lo, int hi) {

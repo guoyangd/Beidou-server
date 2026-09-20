@@ -124,6 +124,9 @@ public class CharacterService {
                         && (RequireUtil.isEmpty(request.getName()) || chr.getName().contains(request.getName()))
                         && (Objects.isNull(request.getMap()) || Objects.equals(chr.getMap().getId(), request.getMap())))
                 .page(chr -> ChrOnlineListRtnDTO.builder()
+                        .world(chr.getWorld())
+                        .channel(chr.getClient() != null && chr.getClient().getChannelServer() != null
+                                ? chr.getClient().getChannelServer().getId() : -1)
                         .id(chr.getId())
                         .name(chr.getName())
                         .map(chr.getMap().getId())

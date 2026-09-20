@@ -98,7 +98,8 @@ public class SocialHotPotatoManager {
         running = true;
         refreshMapScope();
         scheduleNextTick();
-        scheduleNextMegaTick();
+        // megaTick 已按业主指令停用（2026-09-19）：氛围人已删，喇叭会被误抓路过的训练 bot。
+        // scheduleNextMegaTick();
         log("[SocialHotPotato] Started.");
     }
 
@@ -153,7 +154,7 @@ public class SocialHotPotatoManager {
                 log("[SocialHotPotato] Error during mega tick: " + e.getMessage());
                 e.printStackTrace();
             }
-            scheduleNextMegaTick();
+            // scheduleNextMegaTick(); // megaTick 已停用，自递归也一并注释
         }, delay, TimeUnit.MILLISECONDS);
     }
 

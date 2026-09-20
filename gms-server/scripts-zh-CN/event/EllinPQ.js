@@ -82,7 +82,14 @@ function setEventExclusives(eim) {
     eim.setExclusiveItems(itemSet);
 }
 
-function setEventRewards(eim) {}
+function setEventRewards(eim) {
+    var itemSet, itemQty, evLevel;
+
+    evLevel = 1;    //Rewards at clear PQ
+    itemSet = [4001198];      // 阿尔泰碎片，入口 Ellin NPC 处可兑换耳环升级链
+    itemQty = [1];
+    eim.setEventRewards(evLevel, itemSet, itemQty);
+}
 
 function getEligibleParty(party) {      //selects, from the given party, the team that is allowed to attempt this event
     var eligible = [];
@@ -232,6 +239,13 @@ function end(eim) {
 function clearPQ(eim) {
     eim.stopEventTimer();
     eim.setEventCleared();
+
+    // 通关奖励（原版数值）：54000 经验 + 阿尔泰碎片×1
+    eim.giveEventPlayersExp(54000);
+    var party = eim.getPlayers();
+    for (var i = 0; i < party.size(); i++) {
+        eim.giveEventReward(party.get(i));
+    }
 }
 
 function isPoisonGolem(mob) {

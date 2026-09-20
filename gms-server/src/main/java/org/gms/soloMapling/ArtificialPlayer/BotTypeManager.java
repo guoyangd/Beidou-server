@@ -7,6 +7,8 @@ import org.gms.server.maps.MapleMap;
 import org.gms.soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands;
 import org.gms.soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage;
 import org.gms.soloMapling.ArtificialPlayer.BotTypes.Blackjack.BlackjackDealerBot;
+import org.gms.soloMapling.ArtificialPlayer.BotTypes.BossRaidBot;
+import org.gms.soloMapling.ArtificialPlayer.BotTypes.PartyQuestBot;
 import org.gms.soloMapling.ArtificialPlayer.BotTypes.DiceBot;
 import org.gms.soloMapling.ArtificialPlayer.BotTypes.FMBot;
 import org.gms.soloMapling.ArtificialPlayer.BotTypes.GachaBot;
@@ -167,6 +169,20 @@ public class BotTypeManager {
             @Override
             public void createAndSetBot(Character character) {
                 TrainingBot bot = new TrainingBot(character);
+                CharacterStorage.addActiveBot(character.getId(), bot);
+            }
+        },
+        EXPEDITION_BOT {
+            @Override
+            public void createAndSetBot(Character character) {
+                BossRaidBot bot = new BossRaidBot(character);
+                CharacterStorage.addActiveBot(character.getId(), bot);
+            }
+        },
+        PQ_BOT {
+            @Override
+            public void createAndSetBot(Character character) {
+                PartyQuestBot bot = new PartyQuestBot(character);
                 CharacterStorage.addActiveBot(character.getId(), bot);
             }
         },

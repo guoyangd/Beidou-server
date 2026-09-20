@@ -171,6 +171,12 @@ public class OPQBot extends BotSM {
             return;
         }
 
+        // 组队跟随：队长已换图 → 直接 warp 过去（不走 stage FSM 的 transition 链，
+        // 那条链要等特定 NPC/portal 条件，实际从未工作过）
+        if (followLeaderIfDifferentMap()) {
+            return;
+        }
+
         // Authoritative re-home: if the game teleported us to a map we weren't
         // expecting, snap to the correct phase entry state.
         OPQBotState mapDerived = detectPhaseFromMap();
@@ -326,7 +332,8 @@ public class OPQBot extends BotSM {
         // Stage 1 server-side once the leader enters. detectPhaseFromMap() at
         // the top of updateState() then flips us into STAGE_1_NAVIGATE.
 
-        if (getPartyLeader().getMapId() == OPQConstants.OPQ_STAGE_1) {
+        Character leaderS1 = getPartyLeader();
+        if (leaderS1 != null && leaderS1.getMapId() == OPQConstants.OPQ_STAGE_1) {
             cloudPiecesLooted = 0;
             lootedRecordItemId = -1;
             // deliberate synchronous warp: warpBotToLocation blocks through the
@@ -534,7 +541,8 @@ public class OPQBot extends BotSM {
 
         // I'm not sure how to have the bots enter the proper portal which is to get them to the map of OPQ_TOWER
         // Because technically its a PQ instance, so it's gotta be the correct MapleMap, not just generic map.
-        if (getPartyLeader().getMapId() == OPQConstants.OPQ_TOWER) {
+        Character leader = getPartyLeader();
+        if (leader != null && leader.getMapId() == OPQConstants.OPQ_TOWER) {
             // deliberate synchronous warp sequence (blocking arrival choreography)
             blockingSleep(1000);
             OPQOrchestrator.getInstance().followLeaderWarp(getChr(), new Point(-260,-32)); // Spawn point for OPQ tower [x=-260,y=-32]
@@ -546,7 +554,8 @@ public class OPQBot extends BotSM {
 
     private void handleStage1TransitionPart2() {
         // Teleport from Tower to Stage 2
-        if (getPartyLeader().getMapId() == OPQConstants.OPQ_STAGE_2) {
+        Character leader2 = getPartyLeader();
+        if (leader2 != null && leader2.getMapId() == OPQConstants.OPQ_STAGE_2) {
             OPQOrchestrator.getInstance().followLeaderWarp(getChr(), new Point(-113,-321)); // Spawn point for stage 2 [x=-113,y=-321]
             waitFor(1000); // settle after the warp before NAVIGATE ticks
             transitionTo(OPQBotState.STAGE_2_NAVIGATE, "arrived in stage-2 map");
@@ -944,8 +953,34 @@ public class OPQBot extends BotSM {
         return getChr().getParty() != null;
     }
 
+    // 组队跟随：队长不在本图 → warp 到队长图。3 秒冷却防横跳。
+    private long lastFollowWarpMs = 0;
+
+    private boolean followLeaderIfDifferentMap() {
+        Character leader = getPartyLeader();
+        if (leader == null || leader.getMapId() == getChr().getMapId()) return false;
+
+        long now = System.currentTimeMillis();
+        if (now - lastFollowWarpMs < 3_000) return false;
+        lastFollowWarpMs = now;
+
+        try {
+            OPQOrchestrator.getInstance().followLeaderWarp(getChr(),
+                    leader.getMap().getPortal(0) != null
+                            ? leader.getMap().getPortal(0).getPosition()
+                            : new java.awt.Point(0, 0));
+        } catch (Exception e) {
+            // warp 失败不阻塞——下一 tick 会重试
+        }
+        return true;
+    }
+
     private Character getPartyLeader() {
-        return getChr().getParty().getLeader().getPlayer();
+        try {
+            return getChr().getParty().getLeader().getPlayer();
+        } catch (NullPointerException e) {
+            return null; // party disbanded or leader offline
+        }
     }
 
     private boolean leaderLeftStage2() {

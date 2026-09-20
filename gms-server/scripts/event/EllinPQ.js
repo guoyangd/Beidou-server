@@ -76,7 +76,14 @@ function setEventExclusives(eim) {
     eim.setExclusiveItems(itemSet);
 }
 
-function setEventRewards(eim) {}
+function setEventRewards(eim) {
+    var itemSet, itemQty, evLevel;
+
+    evLevel = 1;    //Rewards at clear PQ
+    itemSet = [4001198];      // Altaire Fragment, exchangeable for the earring line at the entrance NPC Ellin
+    itemQty = [1];
+    eim.setEventRewards(evLevel, itemSet, itemQty);
+}
 
 function getEligibleParty(party) {      //selects, from the given party, the team that is allowed to attempt this event
     var eligible = [];
@@ -226,6 +233,13 @@ function end(eim) {
 function clearPQ(eim) {
     eim.stopEventTimer();
     eim.setEventCleared();
+
+    // Clear rewards (original values): 54000 EXP + 1x Altaire Fragment
+    eim.giveEventPlayersExp(54000);
+    var party = eim.getPlayers();
+    for (var i = 0; i < party.size(); i++) {
+        eim.giveEventReward(party.get(i));
+    }
 }
 
 function isPoisonGolem(mob) {
