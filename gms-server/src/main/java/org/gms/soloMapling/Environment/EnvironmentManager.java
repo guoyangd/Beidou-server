@@ -283,7 +283,7 @@ public class EnvironmentManager {
         debugprint(fmt("ScrollBots: {} spawned on potion shop", ids.size()));
     }
 
-    // 通用「入口站桩小队」生成：n 个随机职业 bot 落在出生点附近，注册为指定类型
+    // 通用「入口站桩小队」生成：用 BotSpotPicker 在可达平台上散开站位（不叠 portal 一个点）
     private static int spawnStationedBots(String tag, int entryMapId, int n, int loLevel, int hiLevel,
                                           BotTypeManager.BotType type) {
         MapleMap map = getMapleMapById(entryMapId);
@@ -291,12 +291,15 @@ public class EnvironmentManager {
             debugprint(fmt("{}: no map / spawn portal for {}", tag, entryMapId));
             return 0;
         }
-        Point sp = map.getPortal(0).getPosition();
+        Point anchor = map.getPortal(0).getPosition();
+        // 取 n 个散布位（可达平台上各一个，不够时 fallback 到 anchor）
+        List<Point> spots = BotSpotPicker.pickGroundSpots(map, anchor.x, anchor.y, n);
         List<Integer> ids = new ArrayList<>();
         for (int i = 0; i < n; i++) {
+            Point spawnAt = i < spots.size() ? spots.get(i) : anchor;
             int baseClass = BotDecorate.rollBaseClass();
             try {
-                int botId = BotGeneration.createBot(sp, map, baseClass, loLevel, hiLevel);
+                int botId = BotGeneration.createBot(spawnAt, map, baseClass, loLevel, hiLevel);
                 if (botId > 0) {
                     ids.add(botId);
                 }

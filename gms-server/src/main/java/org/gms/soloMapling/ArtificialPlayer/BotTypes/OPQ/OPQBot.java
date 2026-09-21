@@ -171,12 +171,6 @@ public class OPQBot extends BotSM {
             return;
         }
 
-        // 组队跟随：队长已换图 → 直接 warp 过去（不走 stage FSM 的 transition 链，
-        // 那条链要等特定 NPC/portal 条件，实际从未工作过）
-        if (followLeaderIfDifferentMap()) {
-            return;
-        }
-
         // Authoritative re-home: if the game teleported us to a map we weren't
         // expecting, snap to the correct phase entry state.
         OPQBotState mapDerived = detectPhaseFromMap();
@@ -951,28 +945,6 @@ public class OPQBot extends BotSM {
 
     private boolean isInParty() {
         return getChr().getParty() != null;
-    }
-
-    // 组队跟随：队长不在本图 → warp 到队长图。3 秒冷却防横跳。
-    private long lastFollowWarpMs = 0;
-
-    private boolean followLeaderIfDifferentMap() {
-        Character leader = getPartyLeader();
-        if (leader == null || leader.getMapId() == getChr().getMapId()) return false;
-
-        long now = System.currentTimeMillis();
-        if (now - lastFollowWarpMs < 3_000) return false;
-        lastFollowWarpMs = now;
-
-        try {
-            OPQOrchestrator.getInstance().followLeaderWarp(getChr(),
-                    leader.getMap().getPortal(0) != null
-                            ? leader.getMap().getPortal(0).getPosition()
-                            : new java.awt.Point(0, 0));
-        } catch (Exception e) {
-            // warp 失败不阻塞——下一 tick 会重试
-        }
-        return true;
     }
 
     private Character getPartyLeader() {

@@ -43,7 +43,8 @@ public class BossRaidBot extends TrainingBot {
             return;
         }
 
-        // 入口图：站桩待命
+        // 入口图：站桩待命（不用 waitFor——它会让整个 updateState 被跳过，
+        // 导致 checkPartyQueue 在等待期间不执行，组队邀请无响应）
         if (chr.getMapId() == homeMapId) {
             if (phase == Phase.GRIND) {
                 leaveGrind();
@@ -51,8 +52,7 @@ public class BossRaidBot extends TrainingBot {
             if (phase != Phase.INIT && phase != Phase.IN_TOWN) {
                 enterPhase(Phase.IN_TOWN);
             }
-            waitForRandom(2_000, 6_000);
-            return;
+            return; // 正常 tick 周期(2s)就是站桩间隔
         }
 
         // Boss/PQ 图：保持 GRIND 相位战斗

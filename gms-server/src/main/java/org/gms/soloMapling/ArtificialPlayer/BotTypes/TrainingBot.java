@@ -1138,7 +1138,9 @@ public class TrainingBot extends BotSM {
                 debugChat("FOLLOW: warp failed: " + e.getMessage());
             }
         }
-        enterPhase(Phase.GRIND); // 到了新图重新进入战斗
+        // 目标图有怪 → 战斗；无怪（城镇）→ 决策循环（等队长再换图时立即跟）
+        int destMobLevel = MapMobIndex.level(leader.getMapId());
+        enterPhase(destMobLevel >= 0 ? Phase.GRIND : Phase.DECIDE);
         return true;
     }
 
