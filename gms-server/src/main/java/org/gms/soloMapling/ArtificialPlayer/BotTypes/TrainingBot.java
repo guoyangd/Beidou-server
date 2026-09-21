@@ -1117,6 +1117,8 @@ public class TrainingBot extends BotSM {
         if (leaderPc == null) return false;
         Character leader = leaderPc.getPlayer();
         if (leader == null || leader.getMapId() == chr.getMapId()) return false;
+        // 队长在无怪图（城镇/走廊）→ 不跟（GrindBrain 没怪打会僵站，且防弹跳循环）
+        if (MapMobIndex.level(leader.getMapId()) < 0) return false;
 
         long now = System.currentTimeMillis();
         if (now - lastFollowWarpMs < 3_000) return false; // 冷却
