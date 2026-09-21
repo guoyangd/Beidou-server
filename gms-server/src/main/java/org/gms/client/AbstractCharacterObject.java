@@ -222,7 +222,7 @@ public abstract class AbstractCharacterObject extends AbstractAnimatedMapObject 
         listener.onAnnounceStatPoolUpdate();
     }
 
-    protected void setHp(int newHp) {
+    public void setHp(int newHp) {
         int oldHp = hp;
 
         int thp = newHp;
@@ -232,13 +232,6 @@ public abstract class AbstractCharacterObject extends AbstractAnimatedMapObject 
             thp = localMaxHp;
         }
 
-        // BeiDou: bot 永不死亡——HP 到 0 时 clamp 到 1。
-        // BotContactDamage 的 GC 移动碰撞路径已经是无敌的，但怪物主动攻击、
-        // Boss AoE、掉落伤害等走 Character.applyDamage → setHp 的路径没有 bot 豁免，
-        // bot 会正常死亡并因无客户端点复活而变成永久鬼魂。
-        if (thp <= 0 && this instanceof Character chr && org.gms.soloMapling.ArtificialPlayer.BotHelpers.isBot(chr)) {
-            thp = 1;
-        }
 
         if (this.hp != thp) {
             this.transientHp = Float.NEGATIVE_INFINITY;
@@ -248,7 +241,7 @@ public abstract class AbstractCharacterObject extends AbstractAnimatedMapObject 
         dispatchHpChanged(oldHp);
     }
 
-    protected void setMp(int newMp) {
+    public void setMp(int newMp) {
         int tmp = newMp;
         if (tmp < 0) {
             tmp = 0;

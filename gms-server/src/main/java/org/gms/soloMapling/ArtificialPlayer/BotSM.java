@@ -70,17 +70,66 @@ public abstract class BotSM implements EventSubscriber {
     private static MessageQueue messageQueue = MessageQueue.getInstance();
 
     // One shared tick body for every (re)schedule path - start / priority change / nudge.
+    // ── 死亡自动复活（模拟真人：死→等3秒→回城复活）──
+    // bot HP=0 后进入鬼魂状态，3 秒后自动在返回图（通常是城镇）复活，
+    // FSM 自然重启。效果等同真人「死了点确定回城，过会儿再回来」。
+    private volatile long deathStartedMs = 0;
+    private static final long DEATH_REVIVE_DELAY_MS = 3_000;
+
     private final Runnable tickRunnable = () -> {
         try {
             if (isWaiting()) {
                 return; // FSM-requested pause (waitFor) - skip the tick entirely
             }
+
+            // ── 死亡检查（最优先，在所有 FSM 逻辑之前）──
+            var chr = getChr();
+            if (chr != null && chr.getHp() <= 0) {
+                if (deathStartedMs == 0) {
+                    deathStartedMs = System.currentTimeMillis();
+                    return; // 刚死，等鬼魂动画
+                }
+                if (System.currentTimeMillis() - deathStartedMs < DEATH_REVIVE_DELAY_MS) {
+                    return; // 还在死亡等待中
+                }
+                // 3 秒到了 → 自动复活（回城 + 半血）
+                deathStartedMs = 0;
+                autoReviveAtReturnMap(chr);
+                return;
+            }
+            deathStartedMs = 0; // HP 正常，重置死亡计时
+
             org.gms.soloMapling.server.BotPerfStats.MACRO_TICKS.increment();
             updateState();
         } catch (Exception e) {
             e.printStackTrace(); // Handle exceptions to ensure the scheduler doesn't stop unexpectedly
         }
     };
+
+    // 在当前图的返回图（通常是城镇）复活，恢复 50% HP/MP
+    private void autoReviveAtReturnMap(Character chr) {
+        try {
+            var map = chr.getMap();
+            if (map == null) return;
+            var returnMap = map.getReturnMap();
+            if (returnMap == null) return;
+
+            // 恢复 HP/MP（50%）
+            chr.setHp(Math.max(1, chr.getCurrentMaxHp() / 2));
+            chr.setMp(Math.max(1, chr.getCurrentMaxMp() / 2));
+
+            // warp 到返回图
+            if (returnMap.getPortal(0) != null) {
+                var pos = returnMap.getPortal(0).getPosition();
+                chr.getMap().removePlayer(chr);
+                chr.setMap(returnMap);
+                chr.setPosition(pos);
+                returnMap.addPlayer(chr);
+            }
+        } catch (Exception e) {
+            // 复活失败：下一 tick 会重试（HP 仍为 0，deathStartedMs 已重置为 0 会重新计时）
+        }
+    }
 
     // ── Waiting without sleeping (Fable Phase 4) ─────────────────────────────
     // FSM code that needs a pause calls waitFor(ms) and RETURNS from its tick
