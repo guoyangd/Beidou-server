@@ -1047,18 +1047,24 @@ public class TrainingBot extends BotSM {
         PartyCharacter leaderPc = party.getLeader();
         if (leaderPc != null) {
             Character leader = leaderPc.getPlayer();
-            if (leader != null && !isBot(leader) && leader.getMap() != null) {
+            if (isRealOnlinePlayer(leader)) {
                 return leader;
             }
         }
         // 队长离线/是 bot 时退而求其次：第一个在线真人
         for (PartyCharacter pc : party.getMembers()) {
             Character p = pc == null ? null : pc.getPlayer();
-            if (p != null && !isBot(p) && p.getMap() != null) {
+            if (isRealOnlinePlayer(p)) {
                 return p;
             }
         }
         return null;
+    }
+
+    // 真人 + 在线（有活跃客户端连接）+ 有有效地图
+    private static boolean isRealOnlinePlayer(Character p) {
+        return p != null && !isBot(p) && p.getMap() != null
+                && p.getClient() != null;
     }
 
     // Answers any pending party invite every tick: accept only the player the dialogue armed

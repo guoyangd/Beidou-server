@@ -55,30 +55,44 @@ public class BossRaidBot extends TrainingBot {
             return; // 正常 tick 周期(2s)就是站桩间隔
         }
 
-        // Boss/PQ 图：保持 GRIND 相位战斗
+        // Boss/PQ 图：按当前相位分派，不无条件 enterPhase(GRIND)
+        // （无条件强制 GRIND 会与 doGrind 内部的 GO_TOWN 转换形成相位战争，
+        //  队长下线后 bot 永远无法离开 GRIND → 僵站不动）
         ensureCombatTicker();
-        if (phase != Phase.GRIND) {
-            enterPhase(Phase.GRIND);
-        }
-        doGrind();
-
-        // 会话到期但图上还有怪 → 重返战斗
-        if (phase != Phase.GRIND && chr.getMapId() != homeMapId && countHostiles(chr) > 0) {
-            enterPhase(Phase.GRIND);
-            return;
-        }
-
-        // ── Fix8: 不在入口图 + 没怪 + 队长也不在本图 → 自动回站 ──
-        // PQ 退出后传到 exitMap（≠入口），bot 冻在原地的问题。
-        if (chr.getMapId() != homeMapId && countHostiles(chr) == 0) {
-            leaveGrind();
-            MapleMap home = chr.getClient().getChannelServer().getMapFactory().getMap(homeMapId);
-            if (home != null && home.getPortal(0) != null) {
-                try {
-                    warpBotToLocation(chr, home.getPortal(0).getPosition(), home);
-                } catch (Exception e) {
-                    // warp 失败：下一 tick 重试
+        switch (phase) {
+            case GRIND -> doGrind(); // 正常战斗（doGrind 内部管理会话计时和相位转换）
+            case GO_TOWN, BREAK_TRAVEL, BREAK_REST -> {
+                // TrainingBot 内部会话到期想回家 → BossRaidBot 拦截：
+                // 还有怪 + 队长在线 → 回去继续打；否则 → warp 回站
+                if (countHostiles(chr) > 0 && isPartyLeaderOnline(chr)) {
+                    enterPhase(Phase.GRIND); // 重返战斗（重置会话计时）
+                } else {
+                    warpBackToStation(chr);
                 }
+            }
+            default -> enterPhase(Phase.GRIND); // 首次到达或从站桩转来
+        }
+    }
+
+    // 队长是否在线（有活跃客户端连接）
+    private boolean isPartyLeaderOnline(Character chr) {
+        var party = chr.getParty();
+        if (party == null) return false;
+        var leaderPc = party.getLeader();
+        if (leaderPc == null) return false;
+        Character leader = leaderPc.getPlayer();
+        return leader != null && leader.getClient() != null;
+    }
+
+    // warp 回入口站位
+    private void warpBackToStation(Character chr) {
+        leaveGrind();
+        MapleMap home = chr.getClient().getChannelServer().getMapFactory().getMap(homeMapId);
+        if (home != null && home.getPortal(0) != null) {
+            try {
+                warpBotToLocation(chr, home.getPortal(0).getPosition(), home);
+            } catch (Exception e) {
+                // warp 失败：下一 tick 重试
             }
         }
     }
