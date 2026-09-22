@@ -105,7 +105,6 @@ public class EnvironmentManager {
 
         runWave(1, "Essentials", List.of(
                 () -> spawnCasinoNpcs(),
-                () -> spawnTutorialBot(),
                 () -> populateFreeMarketRegion("henesys"),
                 () -> spawnFMEntranceBotsBatch(3, 3, 3)
         ));
@@ -115,8 +114,7 @@ public class EnvironmentManager {
                 () -> spawnFMEntranceBotsBatch(3, 3, 3),
                 () -> spawnMerchBotsBatch("m1", 1, 1, 1),
                 () -> spawnMerchBotsBatch("m2", 1, 1, 0),
-                () -> spawnMerchBotsBatch("m5", 1, 1, 0),
-                () -> spawnGachaBotsHenesys()
+                () -> spawnMerchBotsBatch("m5", 1, 1, 0)
         ));
 
         // Wave 3 (Henesys population) 已按业主指令移除：村民/填充/跳跳/宠物公园社交属纯氛围（2026-09-17）
@@ -139,8 +137,7 @@ public class EnvironmentManager {
         runWave(6, "Specialty areas", List.of(
                 () -> spawnBlackjackTables(),
                 () -> spawnDropGameBotPotionShop(),
-                () -> spawnDropGameSpectatorsPotionShop(),
-                () -> spawnScrollBotsDirect()
+                () -> spawnDropGameSpectatorsPotionShop()
         ));
 
         runWave(7, "Late arrivals", List.of(
