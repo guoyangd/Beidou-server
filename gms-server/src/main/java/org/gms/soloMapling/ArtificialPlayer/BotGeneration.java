@@ -126,7 +126,9 @@ public class BotGeneration {
     }
 
     private static void placeBotOnMap(Character fakechar, Point pos, MapleMap map) {
-        if (fakechar.getMap() == map) {
+        // 无论是否同一张图，都先从旧图移除——跨图 warp 时旧图不清会导致
+        // bot 同时存在于两张图的角色列表，对方队伍在自己的图里看到「卡住不动」的幽灵 bot
+        if (fakechar.getMap() != null) {
             fakechar.getMap().removePlayer(fakechar);
         }
         fakechar.setMap(map);
