@@ -88,6 +88,13 @@
             align="center"
           />
           <a-table-column title="频道" data-index="channel" :width="70" align="center" />
+          <a-table-column title="地图名" data-index="mapName" :width="160" align="center" />
+          <a-table-column title="地图" data-index="mapName" :width="160" align="center">
+            <template #cell="{ record }">
+              <div>{{ record.mapName || '未知' }}</div>
+              <div style="font-size:11px;color:#888">{{ record.map }}</div>
+            </template>
+          </a-table-column>
           <a-table-column
             :title="$t('account.player.job')"
             data-index="job"
