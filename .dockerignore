@@ -33,3 +33,4 @@ gms-ui/.prettierignore
 gms-ui/commitlint.config.js
 gms-ui/pnpm-lock.yaml
 gms-ui/README.md
+gms-server/src/main/resources/static/

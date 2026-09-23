@@ -14,9 +14,13 @@ if [ ! -f "$marker_file" ]; then
     cp -r "$working_dir_bak"/* "$working_dir"/
     touch "$marker_file"
     echo "Initialization complete. Backup kept at $working_dir_bak for recovery."
+else
+    # 已初始化的卷：仅刷新 jar（镜像里是新构建的），wz/scripts 等用户可改的数据保持不动
+    if ! cmp -s "$working_dir_bak/BeiDou.jar" "$working_dir/BeiDou.jar"; then
+        echo "Refreshing BeiDou.jar from image (code updated)..."
+        cp -f "$working_dir_bak/BeiDou.jar" "$working_dir/BeiDou.jar"
+    fi
 fi
-# 注意：不做 jar 自动刷新——用户通过 tar 解压手动部署新 jar 到 data/server/，
-# entrypoint 不应覆盖。镜像里的 jar 仅在首次初始化时使用。
 
 cd "$working_dir"
 
