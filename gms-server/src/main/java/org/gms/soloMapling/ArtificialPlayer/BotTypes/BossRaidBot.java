@@ -27,6 +27,9 @@ public class BossRaidBot extends TrainingBot {
     // 队长跟随冷却
     private long lastFollowWarpMs = 0;
 
+    // 扎昆前置试炼（死矿区砸岩收文件）的行为脑，进试炼图时接管
+    private final ZakumTrialBrain zakumTrial = new ZakumTrialBrain();
+
     @Override
     public void updateState() {
         // 无条件接受组队邀请（与 PartyQuestBot 同路径）：玩家可直接右键邀请
@@ -36,6 +39,12 @@ public class BossRaidBot extends TrainingBot {
         }
         Character chr = getChr();
         if (chr == null || chr.getMap() == null) {
+            return;
+        }
+
+        // ── 扎昆试炼图（死矿区）：试炼脑完全接管（砸岩石/捡文件/推进走廊/结束回位）──
+        if (ZakumTrialBrain.inTrial(chr.getMapId())) {
+            zakumTrial.tick(this, chr);
             return;
         }
 
@@ -87,7 +96,7 @@ public class BossRaidBot extends TrainingBot {
     }
 
     // warp 回入口站位
-    private void warpBackToStation(Character chr) {
+    protected void warpBackToStation(Character chr) {
         leaveGrind();
         MapleMap home = chr.getClient().getChannelServer().getMapFactory().getMap(homeMapId);
         if (home != null && home.getPortal(0) != null) {
