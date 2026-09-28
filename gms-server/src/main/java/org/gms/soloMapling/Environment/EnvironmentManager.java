@@ -147,14 +147,12 @@ public class EnvironmentManager {
                 () -> spawnMerchBotsBatch("m5", 1, 1, 1)
         ));
 
-        // Roaming training grinders. Counts scaled to ~30% of upstream (BeiDou owner request, 2026-09).
-        // Upstream values: 20/225x5/225/180/220/200/160/200/200 + beginners 25/20/20/20 = 2390.
-        // Each cohort = N job-coherent bots at a town's spawn portal; they
-        // discover nearby level-appropriate field maps via WZ and fan out on their own. DIAL THESE
-        // COUNTS DOWN (e.g. 2 each) for a first-boot pilot, then restore. Sub-level-10 cohorts spawn
-        // Beginners (job 0): the decorator dresses them with a sword and they fight with a basic
-        // skill-0 swing (BotAttackConfig basic-swing fallback), so a 1..9 band is fine - they hunt
-        // snails / shrooms on the low fields each town discovers nearby.
+        // Roaming training grinders. 2026-09-28 业主减载：老区域 cohort 全面减员 ~30%（NAS 带不动
+        // 1300+ 总量），新区（神木/武陵/百草堂）保持满编。练级 bot 合计 925 只（另有 FM/商业/PQ/远征
+        // 等驻场 bot 约 200）。每 cohort = 城镇出生点上的 N 个职业连贯 bot，自行探索附近等级合适的野图散开。
+        // DIAL THESE COUNTS DOWN (e.g. 2 each) for a first-boot pilot, then restore.
+        // Sub-level-10 cohorts spawn Beginners (job 0): the decorator dresses them with a sword and they
+        // fight with a basic skill-0 swing (BotAttackConfig basic-swing fallback), so a 1..9 band is fine.
         //
         // DEEP-HUB cohorts: map discovery is hop-capped by level (hopsForLevel), so a long dungeon's far
         // end is out of a town-spawned bot's reach until it's high enough level. To populate the deep maps
@@ -167,17 +165,17 @@ public class EnvironmentManager {
         runWave(8, "Training bots", List.of(
                 () -> GCMovement.mapsWithinHops(MapId.HENESYS, 1),          // prewarm the portal graph once
                 () -> spawnTrainingBotsAt(MapId.LITH_HARBOUR, 9, 1, 15),
-                () -> spawnTrainingBotsAt(MapId.HENESYS, 102, 10, 95),
-                () -> spawnTrainingBotsAt(MapId.KERNING_CITY, 102, 10, 65),
-                () -> spawnTrainingBotsAt(MapId.PERION, 102, 10, 65),
-                () -> spawnTrainingBotsAt(MapId.ELLINIA, 102, 10, 65),
-                () -> spawnTrainingBotsAt(MapId.SLEEPYWOOD, 102, 25, 95),  // town: Sleepy Dungeon + Ant Tunnel I-IV + Forest of Golem
-                () -> spawnTrainingBotsAt(MapId.ANT_TUNNEL_PARK, 81, 40, 95), // deep hub (~9 hops in): Cave of Evil Eye / Grave of Mushmom
-                () -> spawnTrainingBotsAt(MapId.ORBIS, 99, 30, 86),
-                () -> spawnTrainingBotsAt(MapId.LUDIBRIUM, 90, 25, 95),
-                () -> spawnTrainingBotsAt(MapId.PATH_OF_TIME_HUB, 72, 70, 95), // deep hub: Forgotten Path of Time / Clocktower (Platoon Chronos, Papa Pixie → Papulatus)
-                () -> spawnTrainingBotsAt(MapId.EL_NATH, 90, 50, 80),  // town: shops at El Nath Market (potion / equip); grinds Ice Valley + cloud maps
-                () -> spawnTrainingBotsAt(MapId.SHARP_CLIFF_I, 90, 60, 90), // deep hub (Jeff one-way from Ice Valley II): Sharp Cliff II / Wolf Territory / Forest of Dead Trees / Dead Mine
+                () -> spawnTrainingBotsAt(MapId.HENESYS, 70, 10, 95),
+                () -> spawnTrainingBotsAt(MapId.KERNING_CITY, 70, 10, 65),
+                () -> spawnTrainingBotsAt(MapId.PERION, 70, 10, 65),
+                () -> spawnTrainingBotsAt(MapId.ELLINIA, 70, 10, 65),
+                () -> spawnTrainingBotsAt(MapId.SLEEPYWOOD, 70, 25, 95),  // town: Sleepy Dungeon + Ant Tunnel I-IV + Forest of Golem
+                () -> spawnTrainingBotsAt(MapId.ANT_TUNNEL_PARK, 55, 40, 95), // deep hub (~9 hops in): Cave of Evil Eye / Grave of Mushmom
+                () -> spawnTrainingBotsAt(MapId.ORBIS, 65, 30, 86),
+                () -> spawnTrainingBotsAt(MapId.LUDIBRIUM, 60, 25, 95),
+                () -> spawnTrainingBotsAt(MapId.PATH_OF_TIME_HUB, 50, 70, 95), // deep hub: Forgotten Path of Time / Clocktower (Platoon Chronos, Papa Pixie → Papulatus)
+                () -> spawnTrainingBotsAt(MapId.EL_NATH, 60, 50, 80),  // town: shops at El Nath Market (potion / equip); grinds Ice Valley + cloud maps
+                () -> spawnTrainingBotsAt(MapId.SHARP_CLIFF_I, 60, 60, 90), // deep hub (Jeff one-way from Ice Valley II): Sharp Cliff II / Wolf Territory / Forest of Dead Trees / Dead Mine
                 () -> spawnTrainingBotsAt(MapId.LEAFRE, 90, 95, 140),  // 神木村：米纳尔森林/龙之森林高级带（Raptor/格瑞芬迪/喷火龙），95+ 半径全开可达深图
                 () -> spawnTrainingBotsAt(MapId.MU_LUNG, 60, 45, 85),  // 武陵：竹林 + 稻草人训练场（"少林寺"），寺内深处由 70+ 的大半径覆盖
                 () -> spawnTrainingBotsAt(MapId.HERB_TOWN, 40, 55, 90), // 百草堂：海盗据点周边（与 PPQ 入口同区域）
