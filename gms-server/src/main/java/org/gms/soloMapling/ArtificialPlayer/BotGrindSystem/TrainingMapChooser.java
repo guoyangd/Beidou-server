@@ -52,6 +52,11 @@ public final class TrainingMapChooser {
 
     private static final int MAX_REDECIDES = 2;              // capacity-reservation re-rolls before accepting an over-cap map
 
+    // 野外单图 bot 数硬上限。地图自身的 claimable-spot 容量在大图（多平台/多刷点）上可达 15-25，
+    // 实测热点地图堆到 20+ 个 bot、而同级其他图空无一人——业主期望"分散在各个地图"。
+    // 全局限幅后 ~200 张可练级图 × 8 位 ≈ 1600 槽位，远大于 bot 总数，不会造成无图可去。
+    private static final int FIELD_MAP_BOT_CEILING = 8;
+
     // How many training bots currently target each map (world-wide). DECIDE reserves a slot here
     // BEFORE travelling, so simultaneous deciders see each other and spread across maps.
     private static final Map<Integer, AtomicInteger> BOTS_PER_MAP = new ConcurrentHashMap<>();
@@ -137,11 +142,10 @@ public final class TrainingMapChooser {
         return botsOnMap(mapId);
     }
 
-    // A map's bot carrying capacity = its claimable-spot count (or the span quota on a ROAM map).
-    // SpotFinder prefers the exact live profile when the map has one, else a cached cluster-count
-    // estimate over the static WZ spawn positions — no live map load, no nav bake.
+    // A map's bot carrying capacity = its claimable-spot count (or the span quota on a ROAM map),
+    // capped by the world-wide field ceiling so big maps stop hoarding cohorts.
     public static int mapCapacity(int mapId) {
-        return SpotFinder.mapBotCapacity(mapId);
+        return Math.min(SpotFinder.mapBotCapacity(mapId), FIELD_MAP_BOT_CEILING);
     }
 
     // ── Selection math ──

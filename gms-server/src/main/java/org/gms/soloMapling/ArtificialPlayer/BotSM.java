@@ -23,6 +23,7 @@ import org.gms.soloMapling.server.BotTickService;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.gms.soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands.botClearChalkboard;
 import static org.gms.soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage.botLoggedIn;
@@ -76,6 +77,14 @@ public abstract class BotSM implements EventSubscriber {
     private volatile long deathStartedMs = 0;
     private static final long DEATH_REVIVE_DELAY_MS = 3_000;
 
+    // ── 自动嗑药（模拟真人：血/蓝低于阈值就补）──
+    // 只改数值不广播动画（白药对旁观者本就无可见效果）。有冷却、单次回复量有限，
+    // 爆发伤害仍然会打死 bot——保留死亡机制（业主明确要求 bot 可死）。
+    private volatile long lastPotionMs = 0;
+    private static final long POTION_COOLDOWN_MS = 6_000;
+    private static final double HP_POTION_RATIO = 0.55;   // HP < 55% 触发
+    private static final double MP_POTION_RATIO = 0.25;   // MP < 25% 触发
+
     private final Runnable tickRunnable = () -> {
         try {
             if (isWaiting()) {
@@ -84,6 +93,9 @@ public abstract class BotSM implements EventSubscriber {
 
             // ── 死亡检查（最优先，在所有 FSM 逻辑之前）──
             var chr = getChr();
+            if (chr != null && chr.getHp() > 0) {
+                autoPotion(chr); // 活着才嗑药；已经死了就不救（走复活流程）
+            }
             if (chr != null && chr.getHp() <= 0) {
                 if (deathStartedMs == 0) {
                     deathStartedMs = System.currentTimeMillis();
@@ -105,6 +117,32 @@ public abstract class BotSM implements EventSubscriber {
             e.printStackTrace(); // Handle exceptions to ensure the scheduler doesn't stop unexpectedly
         }
     };
+
+    // 自动嗑药：血低于 55% 回约 1/3 最大生命（白药→超级药水的量级），
+    // 蓝低于 25% 回约 6 成最大魔力。量级带随机浮动，冷却 6 秒。
+    private void autoPotion(Character chr) {
+        long now = System.currentTimeMillis();
+        if (now - lastPotionMs < POTION_COOLDOWN_MS) {
+            return;
+        }
+        int maxHp = chr.getCurrentMaxHp();
+        int maxMp = chr.getCurrentMaxMp();
+        boolean hpLow = chr.getHp() < maxHp * HP_POTION_RATIO;
+        boolean mpLow = chr.getMp() < maxMp * MP_POTION_RATIO;
+        if (!hpLow && !mpLow) {
+            return;
+        }
+        lastPotionMs = now;
+        ThreadLocalRandom rng = ThreadLocalRandom.current();
+        if (hpLow) {
+            int heal = (int) (maxHp * (0.30 + rng.nextDouble() * 0.10)); // 30%~40% maxHp
+            chr.setHp(Math.min(maxHp, chr.getHp() + Math.max(1, heal)));
+        }
+        if (mpLow) {
+            int heal = (int) (maxMp * (0.50 + rng.nextDouble() * 0.20)); // 50%~70% maxMp
+            chr.setMp(Math.min(maxMp, chr.getMp() + Math.max(1, heal)));
+        }
+    }
 
     // 在当前图的返回图（通常是城镇）复活，恢复 50% HP/MP
     private void autoReviveAtReturnMap(Character chr) {

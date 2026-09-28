@@ -7,12 +7,14 @@ import static org.gms.soloMapling.ArtificialPlayer.BotGeneration.warpBotToLocati
 import static org.gms.soloMapling.ArtificialPlayer.BotPartySystem.BotPartyLogic.checkPartyQueue;
 
 /**
- * 远征 Boss 战机器人（v1）：入口站桩待命，被 BotExpeditionRecruiter 自动加进报名中的远征队；
- * 队长开战被 eim 传进 Boss 图后，就地复用 TrainingBot 的整套 GrindBrain 战斗（选目标/接近/输出/嗑药），
+ * 远征 Boss 战机器人（v2）：入口站桩待命，被 BotExpeditionRecruiter 自动加进报名中的远征队；
+ * 队长开战时 eim.registerExpedition → 脚本 playerEntry 把全员（含 bot，依赖 Character.isLoggedInWorld
+ * 对 bot 放行）传进 Boss 图，就地复用 TrainingBot 的整套 GrindBrain 战斗（选目标/接近/输出/嗑药），
  * 战斗会话结束或休息触发想离开时，只要图上还有怪就重新进入战斗（Boss 不死不撤退）；
  * 副本结束被传回入口图后回到站桩待命，可参加下一场。
  *
- * v1 边界：不做扎昆手臂分配（GrindBrain 就近选目标）、不做前置任务豁免（Zakum/HT 暂不投放）。
+ * v2 边界：不做扎昆手臂分配（GrindBrain 就近选目标）；前置任务（如扎昆试炼/火眼）由队长真人完成，
+ * bot 经 Expedition.addMember 入列本身无前置校验。
  */
 public class BossRaidBot extends TrainingBot {
 

@@ -617,7 +617,10 @@ public class Character extends AbstractCharacterObject {
     }
 
     public boolean isLoggedInWorld() {
-        return this.isLoggedIn() && !this.isAwayFromWorld();
+        // SoloMapling: bot 不走登录流程，loggedIn 恒为 false（autosaver 靠 isLoggedIn() 跳过 bot 落库，
+        // 这层语义必须保留）；但「角色存活于世界中」对 bot 为真——远征 Expedition.getActiveMembers 和
+        // EIM.registerPlayer 都用本方法收编成员，返回 false 会导致远征开战时陪打 bot 全被留在入口图。
+        return (this.isLoggedIn() || client instanceof BotClient) && !this.isAwayFromWorld();
     }
 
     public boolean isAwayFromWorld() {

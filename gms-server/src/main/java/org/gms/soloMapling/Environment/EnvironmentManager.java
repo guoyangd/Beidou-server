@@ -178,6 +178,9 @@ public class EnvironmentManager {
                 () -> spawnTrainingBotsAt(MapId.PATH_OF_TIME_HUB, 72, 70, 95), // deep hub: Forgotten Path of Time / Clocktower (Platoon Chronos, Papa Pixie → Papulatus)
                 () -> spawnTrainingBotsAt(MapId.EL_NATH, 90, 50, 80),  // town: shops at El Nath Market (potion / equip); grinds Ice Valley + cloud maps
                 () -> spawnTrainingBotsAt(MapId.SHARP_CLIFF_I, 90, 60, 90), // deep hub (Jeff one-way from Ice Valley II): Sharp Cliff II / Wolf Territory / Forest of Dead Trees / Dead Mine
+                () -> spawnTrainingBotsAt(MapId.LEAFRE, 90, 95, 140),  // 神木村：米纳尔森林/龙之森林高级带（Raptor/格瑞芬迪/喷火龙），95+ 半径全开可达深图
+                () -> spawnTrainingBotsAt(MapId.MU_LUNG, 60, 45, 85),  // 武陵：竹林 + 稻草人训练场（"少林寺"），寺内深处由 70+ 的大半径覆盖
+                () -> spawnTrainingBotsAt(MapId.HERB_TOWN, 40, 55, 90), // 百草堂：海盗据点周边（与 PPQ 入口同区域）
 
                 () -> spawnTrainingBotsAt(MapId.HENESYS, 8, 1,  9),  // beginner sword grinders
                 () -> spawnTrainingBotsAt(MapId.KERNING_CITY, 6, 1,  9),  // beginner sword grinders
@@ -198,7 +201,8 @@ public class EnvironmentManager {
         runWave(10, "Expedition bots", List.of(
                 () -> spawnExpeditionBotsAt(801040004, 6, 100, 130),  // Showa 入口（洗浴街，NPC 9120201）
                 () -> spawnExpeditionBotsAt(105100100, 6, 50, 80),    // Balrog 入口（地下庙宇广场）
-                () -> spawnExpeditionBotsAt(211042400, 6, 110, 140),  // Zakum 入口（死矿祭坛，NPC 2030013）
+                () -> spawnExpeditionBotsAt(211042400, 6, 110, 140),  // Zakum 报名图（门内死矿祭坛，NPC 2030013 在此收人开战）
+                () -> spawnExpeditionBotsAt(211042300, 4, 110, 140),  // Zakum 试炼门口（氛围：等进门的远征队；试炼要 6 人组队，见 wave 11）
                 () -> spawnExpeditionBotsAt(240050400, 6, 130, 160),  // Horntail 入口（神木生命之穴）
                 () -> spawnExpeditionBotsAt(551030100, 6, 110, 140),  // Scarga 入口（马来西亚奇幻主题公园）
                 () -> spawnExpeditionBotsAt(270050000, 6, 150, 180)   // PinkBean 入口（时间神殿起源之塔）
@@ -211,7 +215,8 @@ public class EnvironmentManager {
                 () -> spawnPQBotsAt(701010322, 6, 40, 70),   // 蜈蚣 PQ（东方神州，NPC 9310006）
                 () -> spawnPQBotsAt(702070400, 6, 125, 155), // 妖僧 PQ（少林密室，NPC 9310039）
                 () -> spawnPQBotsAt(970030000, 6, 60, 100),  // BossRushPQ（连战大厅，NPC 9977777）
-                () -> spawnPQBotsAt(251010404, 6, 60, 95)    // PPQ 海盗（赫卜镇，NPC 2094000）
+                () -> spawnPQBotsAt(251010404, 6, 60, 95),   // PPQ 海盗（赫卜镇，NPC 2094000）
+                () -> spawnPQBotsAt(211042300, 6, 90, 140)   // 扎昆试炼（门口 NPC 2030008：固定 6 人队才能进阶段1，PQ bot 顶人数）
         ));
 
         BotExpeditionRecruiter.start();
