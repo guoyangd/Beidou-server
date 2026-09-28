@@ -35,6 +35,8 @@ final class ZakumTrialBrain {
 
     static final int TRIAL_MIN_MAP = 280010000;   // Unknown Dead Mine（阶段1：死矿区）
     static final int TRIAL_MAX_MAP = 280011006;   // Breath of Lava（阶段2图也在窗口内，行为同样适用）
+    static final int LAVA_MIN_MAP = 280020000;    // 阶段2：熔岩之息 爬图 Level 1
+    static final int LAVA_MAX_MAP = 280020001;    // 阶段2：熔岩之息 爬图 Level 2（最右 Lira 发奖励）
 
     private static final int ROCK_MIN_ID = 2112000, ROCK_MAX_ID = 2112017;
     private static final int HIT_RANGE_PX = 70;      // 与岩石的判定水平距离
@@ -54,13 +56,23 @@ final class ZakumTrialBrain {
         return mapId >= TRIAL_MIN_MAP && mapId <= TRIAL_MAX_MAP;
     }
 
+    static boolean inLava(int mapId) {
+        return mapId >= LAVA_MIN_MAP && mapId <= LAVA_MAX_MAP;
+    }
+
     /**
-     * 每 tick（约 2 秒）调用；在试炼图内完全接管 bot 行为。
+     * 每 tick（约 2 秒）调用；在试炼/熔岩图内完全接管 bot 行为。
      * 返回后调用方（BossRaidBot.updateState）直接 return，不再走站桩/战斗分支。
      */
     void tick(BossRaidBot bot, Character chr) {
         MapleMap map = chr.getMap();
         if (map == null) {
+            return;
+        }
+
+        // ── 阶段2 熔岩爬图：跟队长爬到最右；队长离开熔岩 → 跟出（无 eim，靠队长判定收尾）──
+        if (inLava(map.getId())) {
+            tickLava(bot, chr, map);
             return;
         }
 
@@ -254,6 +266,82 @@ final class ZakumTrialBrain {
         }
         MovementCommands.pathFinderBetaAerial(chr, pp);
         bot.waitFor(2200 + ThreadLocalRandom.current().nextInt(800));
+    }
+
+    // ── 阶段2：熔岩爬图 ───────────────────────────────────────────────────
+
+    private void tickLava(BossRaidBot bot, Character chr, MapleMap map) {
+        // 队长已离开熔岩（拿完奖励被 Lira 送走/放弃下墙）→ 跟队长出去
+        Character leader = partyLeader(chr);
+        if (leader != null && !inLava(leader.getMapId())) {
+            var leaderMap = leader.getMap();
+            if (leaderMap != null && leaderMap.getPortal(0) != null) {
+                try {
+                    warpBotToLocation(chr, leaderMap.getPortal(0).getPosition(), leaderMap);
+                    bot.waitFor(2000);
+                } catch (Exception ignore) {
+                    // warp 失败下一 tick 重试
+                }
+            }
+            return;
+        }
+
+        // 爬向最右：Level 1 有 east00 门（tm=280020001），Level 2 是尽头（最右是 Lira 的崖台）
+        if (map.getId() == LAVA_MIN_MAP) {
+            Portal east = null;
+            for (Portal p : map.getPortals()) {
+                if (p.getTargetMapId() == LAVA_MAX_MAP) {
+                    east = p;
+                    break;
+                }
+            }
+            if (east != null) {
+                Point pp = east.getPosition();
+                if (Math.abs(chr.getPosition().x - pp.x) <= HIT_RANGE_PX
+                        && Math.abs(chr.getPosition().y - pp.y) <= SAME_FLOOR_PX + 30) {
+                    MapleMap target = chr.getWarpMap(east.getTargetMapId());
+                    if (target != null) {
+                        try {
+                            warpBotToLocation(chr, target.getPortal(0).getPosition(), target);
+                            walkTarget = null;
+                            stuckTicks = 0;
+                            bot.waitFor(1500);
+                        } catch (Exception ignore) {
+                        }
+                    }
+                    return;
+                }
+                climbToward(bot, chr, pp);
+                return;
+            }
+        }
+        // Level 2（或无门的异常情况）：朝最右崖台爬，爬不动就原地待命
+        Point now = chr.getPosition();
+        if (now.x < 5600) {
+            climbToward(bot, chr, new Point(Math.min(now.x + 900, 6100), now.y));
+        } else {
+            idleWander(bot, chr); // 已在终点附近：陪队长领奖
+        }
+    }
+
+    // 爬图专用走位：带卡住放弃（JQ 平台错落，走不到就停下等人，不掉线不乱跳）
+    private void climbToward(BossRaidBot bot, Character chr, Point dest) {
+        if (!dest.equals(walkTarget)) {
+            walkTarget = dest;
+            stuckTicks = 0;
+        } else if (++stuckTicks > STUCK_TICK_LIMIT) {
+            idleWander(bot, chr); // 爬不过去：原地小踱步
+            return;
+        }
+        MovementCommands.pathFinderBetaAerial(chr, dest);
+        bot.waitFor(2000 + ThreadLocalRandom.current().nextInt(800));
+    }
+
+    private Character partyLeader(Character chr) {
+        var party = chr.getParty();
+        if (party == null) return null;
+        var leaderPc = party.getLeader();
+        return leaderPc == null ? null : leaderPc.getPlayer();
     }
 
     // ── 待机 ──────────────────────────────────────────────────────────────

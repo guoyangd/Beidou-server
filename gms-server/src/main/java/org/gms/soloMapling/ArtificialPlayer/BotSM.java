@@ -144,9 +144,18 @@ public abstract class BotSM implements EventSubscriber {
         }
     }
 
-    // 在当前图的返回图（通常是城镇）复活，恢复 50% HP/MP
+    // 在当前图的返回图（通常是城镇）复活，恢复 50% HP/MP。
+    // 副本战斗中（远征 Boss/PQ 的 eim 还开着）改为原地复活——等同牧师战斗复活，
+    // 否则打扎昆时 bot 被 Boss 爆发打死一次就全员回城，本内只剩真人单挑。
     private void autoReviveAtReturnMap(Character chr) {
         try {
+            var eim = chr.getEventInstance();
+            if (eim != null && !eim.isEventCleared()) {
+                chr.setHp(Math.max(1, chr.getCurrentMaxHp() / 2));
+                chr.setMp(Math.max(1, chr.getCurrentMaxMp() / 2));
+                return;
+            }
+
             var map = chr.getMap();
             if (map == null) return;
             var returnMap = map.getReturnMap();

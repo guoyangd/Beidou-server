@@ -42,8 +42,8 @@ public class BossRaidBot extends TrainingBot {
             return;
         }
 
-        // ── 扎昆试炼图（死矿区）：试炼脑完全接管（砸岩石/捡文件/推进走廊/结束回位）──
-        if (ZakumTrialBrain.inTrial(chr.getMapId())) {
+        // ── 扎昆前置链：死矿区试炼（砸岩收文件）/ 熔岩爬图由试炼脑接管 ──
+        if (ZakumTrialBrain.inTrial(chr.getMapId()) || ZakumTrialBrain.inLava(chr.getMapId())) {
             zakumTrial.tick(this, chr);
             return;
         }
@@ -73,11 +73,16 @@ public class BossRaidBot extends TrainingBot {
         switch (phase) {
             case GRIND -> doGrind(); // 正常战斗（doGrind 内部管理会话计时和相位转换）
             case GO_TOWN, BREAK_TRAVEL, BREAK_REST -> {
-                // TrainingBot 内部会话到期想回家 → BossRaidBot 拦截：
-                // 还有怪 + 队长在线 → 回去继续打；否则 → warp 回站
-                if (countHostiles(chr) > 0 && isPartyLeaderOnline(chr)) {
+                // TrainingBot 内部会话到期想回家 → BossRaidBot 拦截。
+                // 副本还开着（远征/PQ 的 eim 未结束）→ 绝不撤退：
+                //   有怪（含无队伍的远征成员）→ 重返战斗；
+                //   没怪（等队长放火眼召唤扎昆 / 阶段间隙）→ 原地待命。
+                // 只有不在副本里才走"无怪回站"的老逻辑。
+                var eim = chr.getEventInstance();
+                boolean inLiveEvent = eim != null && !eim.isEventCleared();
+                if (countHostiles(chr) > 0 && (inLiveEvent || isPartyLeaderOnline(chr))) {
                     enterPhase(Phase.GRIND); // 重返战斗（重置会话计时）
-                } else {
+                } else if (!inLiveEvent) {
                     warpBackToStation(chr);
                 }
             }
@@ -116,8 +121,12 @@ public class BossRaidBot extends TrainingBot {
         if (leaderPc == null) return false;
         Character leader = leaderPc.getPlayer();
         if (leader == null || leader.getMapId() == chr.getMapId()) return false;
-        // 队长在无怪图（城镇/走廊）→ 不跟，防止「跟到城→回站→再跟」弹跳循环
-        if (org.gms.soloMapling.ArtificialPlayer.BotGrindSystem.MapMobIndex.level(leader.getMapId()) < 0) return false;
+        boolean leaderInLava = ZakumTrialBrain.inLava(leader.getMapId());
+        boolean meInLava = ZakumTrialBrain.inLava(chr.getMapId());
+        // 队长在无怪图（城镇/走廊）→ 不跟，防止「跟到城→回站→再跟」弹跳循环。
+        // 例外：扎昆阶段2 熔岩爬图（无怪 JQ，队伍 bot 要跟进跟出）。
+        if (!leaderInLava && !meInLava
+                && org.gms.soloMapling.ArtificialPlayer.BotGrindSystem.MapMobIndex.level(leader.getMapId()) < 0) return false;
 
         long now = System.currentTimeMillis();
         if (now - lastFollowWarpMs < 3_000) return false;
